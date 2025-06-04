@@ -191,36 +191,23 @@ export default function SettingsPage() {
                 <h2 className="text-xl font-semibold">Model Ayarları</h2>
               </div>
               
-              <div>
-                <label htmlFor="defaultModel" className="block text-sm font-medium text-gray-700 mb-2">
-                  Varsayılan LLM Modeli
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Varsayılan Model
                 </label>
                 <select
-                  id="defaultModel"
-                  name="defaultModel"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   value={settings.defaultModel}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  onChange={(e) => setSettings({...settings, defaultModel: e.target.value})}
                 >
-                  <optgroup label="OpenAI">
-                    <option value="gpt-4">GPT-4</option>
-                    <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
-                  </optgroup>
-                  <optgroup label="Mistral AI">
-                    <option value="mistral-large">Mistral Large</option>
-                    <option value="mistral-medium">Mistral Medium</option>
-                    <option value="mistral-small">Mistral Small (Ücretsiz)</option>
-                    <option value="mistral-tiny">Mistral Tiny (Ücretsiz)</option>
-                    <option value="codestral">Codestral</option>
-                  </optgroup>
-                  <optgroup label="Diğer">
-                    <option value="claude-3">Claude 3</option>
-                    <option value="llama-2">LLaMA 2</option>
-                    <option value="gemini-pro">Gemini Pro</option>
-                  </optgroup>
+                  <option value="mistral-small-latest">Mistral Small (Hızlı)</option>
+                  <option value="mistral-large-latest">Mistral Large (Güçlü)</option>
+                  <option value="mistral-medium-latest">Mistral Medium (Dengeli)</option>
+                  <option value="open-mistral-nemo">Mistral Nemo (Çok dilli)</option>
+                  <option value="codestral-latest">Codestral (Kod analizi)</option>
                 </select>
-                <p className="mt-1 text-xs text-gray-500">
-                  Analiz işlemleri için kullanılacak varsayılan model. Mistral Small ve Tiny ücretsiz katmanda kullanılabilir.
+                <p className="mt-2 text-sm text-gray-500">
+                  AI analizi için kullanılacak varsayılan model seçin
                 </p>
               </div>
             </div>

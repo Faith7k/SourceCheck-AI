@@ -17,7 +17,7 @@ interface MistralResponse {
   }>
 }
 
-const DEFAULT_MISTRAL_MODEL = 'mistral-small'
+const DEFAULT_MISTRAL_MODEL = 'mistral-small-latest'
 
 export async function POST(request: NextRequest) {
   try {
@@ -43,8 +43,19 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Model seçimi
+    // Model seçimi - güncel modelleri kullan
     const model = settings?.model || DEFAULT_MISTRAL_MODEL
+    
+    // Model doğrulaması
+    const validModels = [
+      'mistral-small-latest',
+      'mistral-large-latest', 
+      'mistral-medium-latest',
+      'open-mistral-nemo',
+      'codestral-latest'
+    ]
+    
+    const finalModel = validModels.includes(model) ? model : DEFAULT_MISTRAL_MODEL
 
     // İçerik türüne göre prompt hazırlama
     let systemPrompt = ''
@@ -77,7 +88,7 @@ Sadece bu format ile yanıt ver, başka bir şey ekleme.`
         'Authorization': `Bearer ${apiKey}`
       },
       body: JSON.stringify({
-        model: model,
+        model: finalModel,
         messages: [
           {
             role: 'system',
@@ -158,12 +169,12 @@ Sadece bu format ile yanıt ver, başka bir şey ekleme.`
       aiDetection: parsedResult.detection,
       explanation: parsedResult.explanation,
       sources: [
-        `Mistral AI ${model} modeli kullanılarak analiz edildi`,
+        `Mistral AI ${finalModel} modeli kullanılarak analiz edildi`,
         'Gelişmiş dil modeli kalıpları analizi',
         'Metin yapısı ve tutarlılık değerlendirmesi',
         ...parsedResult.indicators.slice(0, 3) // En önemli 3 gösterge
       ].filter(Boolean),
-      model: model,
+      model: finalModel,
       timestamp: new Date().toISOString(),
       processingTime: Date.now(),
       rawResponse: aiResponse // Debug için
