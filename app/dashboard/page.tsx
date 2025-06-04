@@ -16,7 +16,8 @@ import {
   Menu,
   CheckCircle,
   AlertCircle,
-  Info
+  Info,
+  Loader2
 } from 'lucide-react'
 
 interface AnalysisResult {
@@ -24,6 +25,8 @@ interface AnalysisResult {
   aiDetection: string
   sources: string[]
   explanation: string
+  model?: string
+  timestamp?: string
 }
 
 interface DemoUser {
@@ -41,6 +44,7 @@ export default function Dashboard() {
   const [isClient, setIsClient] = useState(false)
   const [user, setUser] = useState<DemoUser | null>(null)
   const [textContent, setTextContent] = useState('')
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     setIsClient(true)
@@ -60,96 +64,88 @@ export default function Dashboard() {
     window.location.href = '/login'
   }
 
-  const callMistralAPI = async (content: string) => {
-    try {
-      // Get settings from localStorage
-      const savedSettings = localStorage.getItem('sourcecheck-settings')
-      const settings = savedSettings ? JSON.parse(savedSettings) : {}
-      
-      if (!settings.mistralApiKey) {
-        throw new Error('Mistral API anahtarı bulunamadı. Lütfen ayarlar sayfasından API anahtarınızı girin.')
-      }
-
-      const response = await fetch('https://api.mistral.ai/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${settings.mistralApiKey}`
-        },
-        body: JSON.stringify({
-          model: settings.defaultModel?.includes('mistral') ? settings.defaultModel : 'mistral-small',
-          messages: [
-            {
-              role: 'system',
-              content: 'Sen bir AI içerik tespit uzmanısın. Verilen metni analiz et ve AI tarafından üretilip üretilmediğini değerlendir. Türkçe yanıt ver.'
-            },
-            {
-              role: 'user',
-              content: `Bu metni analiz et ve AI tarafından üretilip üretilmediğini değerlendir: "${content}"`
-            }
-          ],
-          max_tokens: 1000,
-          temperature: 0.3
-        })
-      })
-
-      if (!response.ok) {
-        throw new Error(`API Error: ${response.status}`)
-      }
-
-      const data = await response.json()
-      const aiResponse = data.choices[0].message.content
-
-      // Parse AI response and create analysis result
-      return {
-        confidence: Math.floor(Math.random() * 30) + 70, // 70-100 arası random
-        aiDetection: aiResponse,
-        sources: [
-          "Mistral AI analiz motoru kullanılarak tespit edildi",
-          "Dil modeli kalıpları ve metin yapısı analizi", 
-          "Gerçek zamanlı AI tespit algoritması"
-        ],
-        explanation: `Mistral AI kullanılarak yapılan analiz sonucunda: ${aiResponse}`
-      }
-    } catch (error) {
-      console.error('Mistral API Error:', error)
-      throw error
-    }
-  }
-
   const handleAnalyze = async () => {
     if (!textContent.trim()) {
-      alert('Lütfen analiz edilecek bir metin girin.')
+      setError('Lütfen analiz edilecek bir metin girin.')
       return
     }
 
     setLoading(true)
+    setError(null)
     
     try {
-      // Try Mistral API first
-      const result = await callMistralAPI(textContent)
-      setAnalysis(result)
-    } catch (error) {
-      console.error('API Error:', error)
-      
-      // Fallback to mock analysis
-      setTimeout(() => {
-        setAnalysis({
-          confidence: 87,
-          aiDetection: "Bu içerik büyük olasılıkla AI tarafından üretilmiştir. Metin yapısı ve dil kullanımı yapay zeka modellerinin karakteristik özelliklerini göstermektedir. (Mock analiz - API anahtarı ayarlayın)",
-          sources: [
-            "Demo analiz motoru (Gerçek analiz için API anahtarı gerekli)",
-            "Metin yapısı ve tutarlılık analizi", 
-            "Dil kullanımı ve ifade kalıpları incelemesi"
-          ],
-          explanation: `Mock analiz sonucu. Gerçek AI analizi için ayarlar sayfasından Mistral API anahtarınızı girin. Hata: ${error instanceof Error ? error.message : 'Bilinmeyen hata'}`
+      // Get user settings for API key
+      const savedSettings = localStorage.getItem('sourcecheck-settings')
+      const settings = savedSettings ? JSON.parse(savedSettings) : {}
+
+      const response = await fetch('/api/analyze', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          content: textContent,
+          type: activeTab,
+          settings: {
+            model: settings.defaultModel || 'mistral-small',
+            apiKey: settings.mistralApiKey
+          }
         })
-        setLoading(false)
-      }, 2000)
-      return
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        if (data.needsApiKey) {
+          setError(`${data.error} Ayarlar sayfasından API anahtarınızı girebilirsiniz.`)
+        } else {
+          setError(data.error || 'Analiz sırasında hata oluştu')
+        }
+        return
+      }
+
+      if (data.success) {
+        setAnalysis(data.result)
+        
+        // Save to history
+        const historyItem = {
+          id: Date.now().toString(),
+          type: activeTab,
+          content: textContent,
+          confidence: data.result.confidence,
+          result: data.result.aiDetection,
+          createdAt: new Date().toISOString()
+        }
+        
+        const existingHistory = JSON.parse(localStorage.getItem('sourcecheck-history') || '[]')
+        const updatedHistory = [historyItem, ...existingHistory].slice(0, 50) // Max 50 items
+        localStorage.setItem('sourcecheck-history', JSON.stringify(updatedHistory))
+      }
+
+    } catch (error) {
+      console.error('Analysis Error:', error)
+      setError('Ağ hatası: Analiz servisi ile bağlantı kurulamadı')
+    } finally {
+      setLoading(false)
     }
-    
-    setLoading(false)
+  }
+
+  const getResultColor = (result: string) => {
+    switch (result) {
+      case 'ai-generated': return 'text-red-600 bg-red-50 border-red-200'
+      case 'human-generated': return 'text-green-600 bg-green-50 border-green-200'
+      case 'uncertain': return 'text-yellow-600 bg-yellow-50 border-yellow-200'
+      default: return 'text-gray-600 bg-gray-50 border-gray-200'
+    }
+  }
+
+  const getResultText = (result: string) => {
+    switch (result) {
+      case 'ai-generated': return 'AI Üretimi'
+      case 'human-generated': return 'İnsan Üretimi'
+      case 'uncertain': return 'Belirsiz'
+      default: return 'Bilinmiyor'
+    }
   }
 
   return (
@@ -220,6 +216,27 @@ export default function Dashboard() {
         {/* Main Panel */}
         <main className="flex-1 p-6">
           <div className="max-w-4xl mx-auto">
+            
+            {/* Error Message */}
+            {error && (
+              <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4 flex items-center">
+                <AlertCircle className="h-5 w-5 text-red-600 mr-3 flex-shrink-0" />
+                <div>
+                  <span className="text-red-800">{error}</span>
+                  {error.includes('API anahtarı') && (
+                    <div className="mt-2">
+                      <Link 
+                        href="/dashboard/settings" 
+                        className="text-blue-600 hover:underline text-sm"
+                      >
+                        → Ayarlar sayfasına git
+                      </Link>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* Upload Section */}
             <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
               <h2 className="text-xl font-semibold mb-4">İçerik Analizi</h2>
@@ -262,7 +279,10 @@ export default function Dashboard() {
                     className="w-full h-40 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
                     placeholder="Analiz etmek istediğiniz metni buraya yapıştırın..."
                     value={textContent}
-                    onChange={(e) => setTextContent(e.target.value)}
+                    onChange={(e) => {
+                      setTextContent(e.target.value)
+                      setError(null) // Clear error when user types
+                    }}
                   />
                 </div>
               )}
@@ -272,6 +292,7 @@ export default function Dashboard() {
                   <Upload className="h-12 w-12 mx-auto mb-4 text-gray-400" />
                   <p className="text-gray-600 mb-2">Görsel dosyasını buraya sürükleyin veya tıklayın</p>
                   <p className="text-sm text-gray-500">PNG, JPG, WEBP (maks. 10MB)</p>
+                  <p className="text-xs text-orange-600 mt-2">Yakında aktif olacak...</p>
                   <input type="file" accept="image/*" className="hidden" />
                 </div>
               )}
@@ -281,21 +302,27 @@ export default function Dashboard() {
                   <Upload className="h-12 w-12 mx-auto mb-4 text-gray-400" />
                   <p className="text-gray-600 mb-2">Video dosyasını buraya sürükleyin veya tıklayın</p>
                   <p className="text-sm text-gray-500">MP4, MOV, AVI (maks. 100MB)</p>
+                  <p className="text-xs text-orange-600 mt-2">Yakında aktif olacak...</p>
                   <input type="file" accept="video/*" className="hidden" />
                 </div>
               )}
 
               <button
                 onClick={handleAnalyze}
-                disabled={loading}
-                className="mt-6 w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white py-3 px-4 rounded-lg font-medium flex items-center justify-center"
+                disabled={loading || (activeTab === 'text' && !textContent.trim()) || activeTab !== 'text'}
+                className="mt-6 w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white py-3 px-4 rounded-lg font-medium flex items-center justify-center transition-colors"
               >
                 {loading ? (
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                  <>
+                    <Loader2 className="animate-spin h-5 w-5 mr-2" />
+                    Analiz Ediliyor...
+                  </>
                 ) : (
-                  <Search className="h-5 w-5 mr-2" />
+                  <>
+                    <Search className="h-5 w-5 mr-2" />
+                    {activeTab === 'text' ? 'Analiz Et' : 'Yakında Aktif'}
+                  </>
                 )}
-                {loading ? 'Analiz Ediliyor...' : 'Analiz Et'}
               </button>
             </div>
 
@@ -311,6 +338,11 @@ export default function Dashboard() {
                       <AlertCircle className="h-5 w-5 text-orange-500 mr-2" />
                       <h4 className="font-semibold">AI Tespiti</h4>
                     </div>
+                    
+                    <div className={`mb-3 px-3 py-2 rounded-lg border ${getResultColor(analysis.aiDetection)}`}>
+                      <span className="font-medium">{getResultText(analysis.aiDetection)}</span>
+                    </div>
+                    
                     <div className="mb-2">
                       <div className="flex justify-between mb-1">
                         <span className="text-sm font-medium">Güven Oranı</span>
@@ -318,19 +350,25 @@ export default function Dashboard() {
                       </div>
                       <div className="w-full bg-gray-200 rounded-full h-2">
                         <div 
-                          className="bg-orange-500 h-2 rounded-full" 
+                          className={`h-2 rounded-full ${
+                            analysis.confidence >= 80 ? 'bg-red-500' :
+                            analysis.confidence >= 50 ? 'bg-yellow-500' : 'bg-green-500'
+                          }`}
                           style={{ width: `${analysis.confidence}%` }}
                         ></div>
                       </div>
                     </div>
-                    <p className="text-sm text-gray-600">{analysis.aiDetection}</p>
+                    
+                    {analysis.model && (
+                      <p className="text-xs text-gray-500">Model: {analysis.model}</p>
+                    )}
                   </div>
 
                   {/* Source Tracking */}
                   <div className="border rounded-lg p-4">
                     <div className="flex items-center mb-3">
                       <Info className="h-5 w-5 text-blue-500 mr-2" />
-                      <h4 className="font-semibold">Kaynak Takibi</h4>
+                      <h4 className="font-semibold">Tespit Kaynakları</h4>
                     </div>
                     <ul className="space-y-2">
                       {analysis.sources.map((source: string, index: number) => (
@@ -347,6 +385,12 @@ export default function Dashboard() {
                 <div className="mt-6 border rounded-lg p-4">
                   <h4 className="font-semibold mb-2">Detaylı Açıklama</h4>
                   <p className="text-gray-600">{analysis.explanation}</p>
+                  
+                  {analysis.timestamp && (
+                    <p className="text-xs text-gray-400 mt-3">
+                      Analiz tarihi: {new Date(analysis.timestamp).toLocaleString('tr-TR')}
+                    </p>
+                  )}
                 </div>
               </div>
             )}
