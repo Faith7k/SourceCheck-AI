@@ -87,7 +87,7 @@ export default function Dashboard() {
           content: textContent,
           type: activeTab,
           settings: {
-            model: settings.defaultModel || 'mistral-small',
+            model: settings.defaultModel || 'mistral-small-latest',
             apiKey: settings.mistralApiKey
           }
         })

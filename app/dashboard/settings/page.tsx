@@ -23,7 +23,7 @@ export default function SettingsPage() {
     openaiApiKey: '',
     huggingfaceApiKey: '',
     mistralApiKey: '',
-    defaultModel: 'mistral-small'
+    defaultModel: 'mistral-small-latest'
   })
   const [saved, setSaved] = useState(false)
 

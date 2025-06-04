@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
     const userId = 'demo-user'
     
     const settings = userSettings.get(userId) || {
-      defaultModel: 'mistral-small',
+      defaultModel: 'mistral-small-latest',
       notifications: {
         analysisComplete: true,
         weeklyReport: false,
