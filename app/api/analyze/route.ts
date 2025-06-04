@@ -13,8 +13,15 @@ interface MistralResponse {
   choices: Array<{
     message: {
       content: string
+      role: string
     }
+    finish_reason: string
   }>
+  usage?: {
+    prompt_tokens: number
+    completion_tokens: number
+    total_tokens: number
+  }
 }
 
 const DEFAULT_MISTRAL_MODEL = 'mistral-small-latest'
@@ -46,13 +53,15 @@ export async function POST(request: NextRequest) {
     // Model seçimi - güncel modelleri kullan
     const model = settings?.model || DEFAULT_MISTRAL_MODEL
     
-    // Model doğrulaması
+    // Model doğrulaması - Mistral API dokümantasyonuna göre güncel modeller
     const validModels = [
       'mistral-small-latest',
       'mistral-large-latest', 
       'mistral-medium-latest',
       'open-mistral-nemo',
-      'codestral-latest'
+      'codestral-latest',
+      'ministral-8b-latest',
+      'ministral-3b-latest'
     ]
     
     const finalModel = validModels.includes(model) ? model : DEFAULT_MISTRAL_MODEL
@@ -80,7 +89,7 @@ Sadece bu format ile yanıt ver, başka bir şey ekleme.`
       userPrompt = `Bu metni analiz et: "${content}"`
     }
 
-    // Mistral API çağrısı
+    // Mistral API çağrısı - resmi dokümantasyona göre
     const mistralResponse = await fetch('https://api.mistral.ai/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -100,7 +109,10 @@ Sadece bu format ile yanıt ver, başka bir şey ekleme.`
           }
         ],
         max_tokens: 1500,
-        temperature: 0.3
+        temperature: 0.3,
+        top_p: 1,
+        stream: false,
+        safe_prompt: false
       })
     })
 
@@ -108,6 +120,7 @@ Sadece bu format ile yanıt ver, başka bir şey ekleme.`
       const errorData = await mistralResponse.text()
       console.error('Mistral API Error:', errorData)
       
+      // Mistral API döne spesifik error kodları
       if (mistralResponse.status === 401) {
         return NextResponse.json(
           { error: 'Geçersiz API anahtarı. Lütfen ayarlar sayfasından doğru API anahtarınızı girin.' },
@@ -115,8 +128,15 @@ Sadece bu format ile yanıt ver, başka bir şey ekleme.`
         )
       }
       
+      if (mistralResponse.status === 400) {
+        return NextResponse.json(
+          { error: 'Geçersiz istek formatı veya model ismi. Lütfen model seçimini kontrol edin.' },
+          { status: 400 }
+        )
+      }
+      
       return NextResponse.json(
-        { error: `Mistral API hatası: ${mistralResponse.status}` },
+        { error: `Mistral API hatası: ${mistralResponse.status} - ${mistralResponse.statusText}` },
         { status: 500 }
       )
     }
@@ -176,6 +196,7 @@ Sadece bu format ile yanıt ver, başka bir şey ekleme.`
       ].filter(Boolean),
       model: finalModel,
       timestamp: new Date().toISOString(),
+      usage: mistralData.usage || null,
       processingTime: Date.now(),
       rawResponse: aiResponse // Debug için
     }

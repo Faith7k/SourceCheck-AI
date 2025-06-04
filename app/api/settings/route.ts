@@ -67,10 +67,10 @@ export async function POST(request: NextRequest) {
       ...body
     }
 
-    // API key validasyonu
+    // API key validasyonu - Mistral API dokümantasyonuna göre
     if (body.mistralApiKey && !body.mistralApiKey.startsWith('mr-')) {
       return NextResponse.json(
-        { error: 'Geçersiz Mistral API anahtarı formatı. "mr-" ile başlamalıdır.' },
+        { error: 'Geçersiz Mistral API anahtarı formatı. API anahtarı genellikle "mr-" ile başlar.' },
         { status: 400 }
       )
     }
@@ -80,6 +80,26 @@ export async function POST(request: NextRequest) {
         { error: 'Geçersiz OpenAI API anahtarı formatı. "sk-" ile başlamalıdır.' },
         { status: 400 }
       )
+    }
+
+    // Model validasyonu
+    if (body.defaultModel) {
+      const validModels = [
+        'mistral-small-latest',
+        'mistral-large-latest', 
+        'mistral-medium-latest',
+        'open-mistral-nemo',
+        'codestral-latest',
+        'ministral-8b-latest',
+        'ministral-3b-latest'
+      ]
+      
+      if (!validModels.includes(body.defaultModel)) {
+        return NextResponse.json(
+          { error: `Geçersiz model seçimi: ${body.defaultModel}` },
+          { status: 400 }
+        )
+      }
     }
 
     // Ayarları kaydet

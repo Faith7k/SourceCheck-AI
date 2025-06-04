@@ -200,15 +200,23 @@ export default function SettingsPage() {
                   value={settings.defaultModel}
                   onChange={(e) => setSettings({...settings, defaultModel: e.target.value})}
                 >
-                  <option value="mistral-small-latest">Mistral Small (Hızlı)</option>
-                  <option value="mistral-large-latest">Mistral Large (Güçlü)</option>
+                  <option value="mistral-small-latest">Mistral Small (Hızlı & Ekonomik)</option>
+                  <option value="mistral-large-latest">Mistral Large (En Güçlü)</option>
                   <option value="mistral-medium-latest">Mistral Medium (Dengeli)</option>
-                  <option value="open-mistral-nemo">Mistral Nemo (Çok dilli)</option>
-                  <option value="codestral-latest">Codestral (Kod analizi)</option>
+                  <option value="open-mistral-nemo">Mistral Nemo (Çok dilli & Açık)</option>
+                  <option value="codestral-latest">Codestral (Kod Analizi)</option>
+                  <option value="ministral-8b-latest">Ministral 8B (Ultra Hızlı)</option>
+                  <option value="ministral-3b-latest">Ministral 3B (En Hızlı)</option>
                 </select>
                 <p className="mt-2 text-sm text-gray-500">
-                  AI analizi için kullanılacak varsayılan model seçin
+                  AI analizi için kullanılacak varsayılan Mistral model seçin. Her modelin farklı hız/kalite oranı vardır.
                 </p>
+                <div className="mt-2 text-xs space-y-1">
+                  <p><span className="font-semibold">Small/Large/Medium:</span> En kaliteli sonuçlar</p>
+                  <p><span className="font-semibold">Nemo:</span> 128k context, açık kaynak</p>
+                  <p><span className="font-semibold">Codestral:</span> Kod analizi için optimize</p>
+                  <p><span className="font-semibold">Ministral:</span> Ultra hızlı, düşük maliyet</p>
+                </div>
               </div>
             </div>
 
