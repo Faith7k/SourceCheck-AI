@@ -32,6 +32,9 @@ interface HistoryItem {
   result: 'ai-generated' | 'human-generated' | 'uncertain'
   createdAt: string
   fileName?: string
+  feedbackGiven?: boolean
+  feedbackCorrect?: boolean
+  userCorrection?: string
 }
 
 interface DemoUser {
@@ -48,6 +51,7 @@ export default function HistoryPage() {
   const [filter, setFilter] = useState<'all' | 'text' | 'image' | 'video'>('all')
   const [history, setHistory] = useState<HistoryItem[]>([])
   const [showDemoData, setShowDemoData] = useState(false)
+  const [showFeedback, setShowFeedback] = useState<{[key: string]: boolean}>({})
 
   // Demo veriler
   const demoHistory: HistoryItem[] = [
@@ -121,10 +125,10 @@ export default function HistoryPage() {
 
   const getResultText = (result: string) => {
     switch (result) {
-      case 'ai-generated': return 'AI Üretimi'
-      case 'human-generated': return 'İnsan Üretimi'
-      case 'uncertain': return 'Belirsiz'
-      default: return 'Bilinmiyor'
+      case 'ai-generated': return '🤖 AI Üretimi'
+      case 'human-generated': return '👤 İnsan Üretimi'
+      case 'uncertain': return '❓ Belirsiz'
+      default: return '❓ Bilinmiyor'
     }
   }
 
@@ -150,6 +154,46 @@ export default function HistoryPage() {
     setHistory([])
     setShowDemoData(false)
     localStorage.removeItem('sourcecheck-history')
+  }
+
+  const handleHistoryFeedback = (itemId: string, isCorrect: boolean, userCorrection?: string) => {
+    const updatedHistory = history.map(item => {
+      if (item.id === itemId) {
+        return {
+          ...item,
+          feedbackGiven: true,
+          feedbackCorrect: isCorrect,
+          userCorrection: userCorrection
+        }
+      }
+      return item
+    })
+
+    setHistory(updatedHistory)
+    localStorage.setItem('sourcecheck-history', JSON.stringify(updatedHistory))
+    
+    // Hide feedback form for this item
+    setShowFeedback(prev => ({ ...prev, [itemId]: false }))
+
+    // Save to feedback storage
+    const item = history.find(h => h.id === itemId)
+    if (item) {
+      const feedbackData = {
+        id: Date.now().toString(),
+        timestamp: new Date().toISOString(),
+        content: item.content,
+        type: item.type,
+        originalResult: item.result,
+        confidence: item.confidence,
+        isCorrect: isCorrect,
+        userCorrection: userCorrection,
+        historyItemId: itemId
+      }
+
+      const existingFeedback = JSON.parse(localStorage.getItem('sourcecheck-feedback') || '[]')
+      const updatedFeedback = [feedbackData, ...existingFeedback]
+      localStorage.setItem('sourcecheck-feedback', JSON.stringify(updatedFeedback))
+    }
   }
 
   return (
@@ -367,6 +411,79 @@ export default function HistoryPage() {
                           <Trash2 className="h-4 w-4" />
                         </button>
                       </div>
+                    </div>
+
+                    {/* Feedback Section */}
+                    <div className="mt-4 pt-4 border-t border-gray-100">
+                      {!item.feedbackGiven ? (
+                        !showFeedback[item.id] ? (
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm text-gray-600">Bu tespit doğru mu?</span>
+                            <div className="flex space-x-2">
+                              <button
+                                onClick={() => handleHistoryFeedback(item.id, true)}
+                                className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded-md text-xs font-medium flex items-center"
+                              >
+                                <CheckCircle className="h-3 w-3 mr-1" />
+                                Doğru
+                              </button>
+                              <button
+                                onClick={() => setShowFeedback(prev => ({ ...prev, [item.id]: true }))}
+                                className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded-md text-xs font-medium flex items-center"
+                              >
+                                <AlertCircle className="h-3 w-3 mr-1" />
+                                Hatalı
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="space-y-2">
+                            <p className="text-sm text-gray-600">Doğru cevap nedir?</p>
+                            <div className="flex flex-wrap gap-2">
+                              <button
+                                onClick={() => handleHistoryFeedback(item.id, false, 'ai-generated')}
+                                className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded-md text-xs font-medium"
+                              >
+                                🤖 AI Üretimi
+                              </button>
+                              <button
+                                onClick={() => handleHistoryFeedback(item.id, false, 'human-generated')}
+                                className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded-md text-xs font-medium"
+                              >
+                                👤 İnsan Üretimi
+                              </button>
+                              <button
+                                onClick={() => handleHistoryFeedback(item.id, false, 'uncertain')}
+                                className="bg-yellow-600 hover:bg-yellow-700 text-white px-3 py-1 rounded-md text-xs font-medium"
+                              >
+                                ❓ Belirsiz
+                              </button>
+                              <button
+                                onClick={() => setShowFeedback(prev => ({ ...prev, [item.id]: false }))}
+                                className="text-gray-600 hover:text-gray-800 text-xs underline px-2"
+                              >
+                                İptal
+                              </button>
+                            </div>
+                          </div>
+                        )
+                      ) : (
+                        <div className="flex items-center space-x-2">
+                          {item.feedbackCorrect ? (
+                            <div className="flex items-center text-green-700">
+                              <CheckCircle className="h-4 w-4 mr-2" />
+                              <span className="text-sm">Tespit doğru olarak işaretlendi</span>
+                            </div>
+                          ) : (
+                            <div className="flex items-center text-orange-700">
+                              <AlertCircle className="h-4 w-4 mr-2" />
+                              <span className="text-sm">
+                                Doğru cevap: {getResultText(item.userCorrection || '')} olarak düzeltildi
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}

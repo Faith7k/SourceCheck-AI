@@ -27,6 +27,9 @@ interface AnalysisResult {
   explanation: string
   model?: string
   timestamp?: string
+  feedbackGiven?: boolean
+  feedbackCorrect?: boolean
+  userCorrection?: string
 }
 
 interface DemoUser {
@@ -45,6 +48,7 @@ export default function Dashboard() {
   const [user, setUser] = useState<DemoUser | null>(null)
   const [textContent, setTextContent] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const [showFeedback, setShowFeedback] = useState(false)
 
   useEffect(() => {
     setIsClient(true)
@@ -130,6 +134,49 @@ export default function Dashboard() {
     }
   }
 
+  const handleFeedback = (isCorrect: boolean, userCorrection?: string) => {
+    if (!analysis) return
+
+    const updatedAnalysis = {
+      ...analysis,
+      feedbackGiven: true,
+      feedbackCorrect: isCorrect,
+      userCorrection: userCorrection
+    }
+
+    setAnalysis(updatedAnalysis)
+    setShowFeedback(false)
+
+    // Save feedback to a separate storage for future analysis
+    const feedbackData = {
+      id: Date.now().toString(),
+      timestamp: new Date().toISOString(),
+      content: textContent,
+      type: activeTab,
+      originalResult: analysis.aiDetection,
+      confidence: analysis.confidence,
+      isCorrect: isCorrect,
+      userCorrection: userCorrection,
+      model: analysis.model,
+      sources: analysis.sources,
+      explanation: analysis.explanation
+    }
+
+    const existingFeedback = JSON.parse(localStorage.getItem('sourcecheck-feedback') || '[]')
+    const updatedFeedback = [feedbackData, ...existingFeedback]
+    localStorage.setItem('sourcecheck-feedback', JSON.stringify(updatedFeedback))
+
+    // Update history item if it exists
+    const existingHistory = JSON.parse(localStorage.getItem('sourcecheck-history') || '[]')
+    const updatedHistory = existingHistory.map((item: any) => {
+      if (item.content === textContent && !item.feedbackGiven) {
+        return { ...item, feedbackGiven: true, feedbackCorrect: isCorrect, userCorrection }
+      }
+      return item
+    })
+    localStorage.setItem('sourcecheck-history', JSON.stringify(updatedHistory))
+  }
+
   const getResultColor = (result: string) => {
     switch (result) {
       case 'ai-generated': return 'text-red-600 bg-red-50 border-red-200'
@@ -141,10 +188,10 @@ export default function Dashboard() {
 
   const getResultText = (result: string) => {
     switch (result) {
-      case 'ai-generated': return 'AI Üretimi'
-      case 'human-generated': return 'İnsan Üretimi'
-      case 'uncertain': return 'Belirsiz'
-      default: return 'Bilinmiyor'
+      case 'ai-generated': return '🤖 AI Üretimi'
+      case 'human-generated': return '👤 İnsan Üretimi'
+      case 'uncertain': return '❓ Belirsiz'
+      default: return '❓ Bilinmiyor'
     }
   }
 
@@ -391,6 +438,82 @@ export default function Dashboard() {
                       Analiz tarihi: {new Date(analysis.timestamp).toLocaleString('tr-TR')}
                     </p>
                   )}
+                </div>
+
+                {/* Feedback Section */}
+                <div className="mt-6 border rounded-lg p-4 bg-blue-50">
+                  <h4 className="font-semibold mb-3 text-blue-900">Bu tespit doğru mu?</h4>
+                  
+                  {!analysis.feedbackGiven ? (
+                    !showFeedback ? (
+                      <div className="flex space-x-3">
+                        <button
+                          onClick={() => handleFeedback(true)}
+                          className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm font-medium flex items-center"
+                        >
+                          <CheckCircle className="h-4 w-4 mr-2" />
+                          Evet, doğru
+                        </button>
+                        <button
+                          onClick={() => setShowFeedback(true)}
+                          className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm font-medium flex items-center"
+                        >
+                          <AlertCircle className="h-4 w-4 mr-2" />
+                          Hayır, hatalı
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        <p className="text-sm text-gray-700">Doğru cevap nedir?</p>
+                        <div className="flex space-x-2">
+                          <button
+                            onClick={() => handleFeedback(false, 'ai-generated')}
+                            className="bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded-md text-sm font-medium"
+                          >
+                            🤖 AI Üretimi
+                          </button>
+                          <button
+                            onClick={() => handleFeedback(false, 'human-generated')}
+                            className="bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded-md text-sm font-medium"
+                          >
+                            👤 İnsan Üretimi
+                          </button>
+                          <button
+                            onClick={() => handleFeedback(false, 'uncertain')}
+                            className="bg-yellow-600 hover:bg-yellow-700 text-white px-3 py-2 rounded-md text-sm font-medium"
+                          >
+                            ❓ Belirsiz
+                          </button>
+                        </div>
+                        <button
+                          onClick={() => setShowFeedback(false)}
+                          className="text-gray-600 hover:text-gray-800 text-sm underline"
+                        >
+                          İptal
+                        </button>
+                      </div>
+                    )
+                  ) : (
+                    <div className="flex items-center space-x-2">
+                      {analysis.feedbackCorrect ? (
+                        <div className="flex items-center text-green-700">
+                          <CheckCircle className="h-4 w-4 mr-2" />
+                          <span className="text-sm">Teşekkürler! Tespitin doğru olduğunu belirttiniz.</span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center text-orange-700">
+                          <AlertCircle className="h-4 w-4 mr-2" />
+                          <span className="text-sm">
+                            Teşekkürler! Doğru cevabın {getResultText(analysis.userCorrection || '')} olduğunu belirttiniz.
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  
+                  <p className="text-xs text-blue-700 mt-2">
+                    💡 Geri bildirimleriniz sistemin geliştirilmesi için kullanılır.
+                  </p>
                 </div>
               </div>
             )}
