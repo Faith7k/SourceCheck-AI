@@ -56,12 +56,12 @@ export default function SettingsPage() {
       {/* Sidebar */}
       <div className={`bg-white shadow-lg transition-all duration-300 ${sidebarOpen ? 'w-64' : 'w-16'} md:w-64`}>
         <div className="p-4">
-          <div className="flex items-center">
+          <Link href="/dashboard" className="flex items-center hover:bg-gray-50 rounded-lg p-2 -m-2 transition-colors">
             <Shield className="h-8 w-8 text-blue-600" />
             {(sidebarOpen || (isClient && window?.innerWidth >= 768)) && (
               <span className="ml-3 text-xl font-bold text-gray-900">SourceCheck AI</span>
             )}
-          </div>
+          </Link>
         </div>
         
         <nav className="mt-8">

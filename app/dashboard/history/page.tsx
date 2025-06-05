@@ -201,12 +201,12 @@ export default function HistoryPage() {
       {/* Sidebar */}
       <div className={`bg-white shadow-lg transition-all duration-300 ${sidebarOpen ? 'w-64' : 'w-16'} md:w-64`}>
         <div className="p-4">
-          <div className="flex items-center">
+          <Link href="/dashboard" className="flex items-center hover:bg-gray-50 rounded-lg p-2 -m-2 transition-colors">
             <Shield className="h-8 w-8 text-blue-600" />
             {(sidebarOpen || (isClient && window?.innerWidth >= 768)) && (
               <span className="ml-3 text-xl font-bold text-gray-900">SourceCheck AI</span>
             )}
-          </div>
+          </Link>
         </div>
         
         <nav className="mt-8">
@@ -374,12 +374,18 @@ export default function HistoryPage() {
                           
                           <div className="mb-2">
                             {item.type === 'text' ? (
-                              <p className="text-gray-900 line-clamp-2">
-                                {item.content}
+                              <p className="text-gray-900 line-clamp-2 break-words text-sm leading-relaxed">
+                                {item.content.length > 100 ? `${item.content.substring(0, 100)}...` : item.content}
                               </p>
                             ) : (
-                              <p className="text-gray-900 font-medium">
-                                {item.fileName || item.content}
+                              <p 
+                                className="text-gray-900 font-medium break-words text-sm"
+                                title={item.fileName || item.content}
+                              >
+                                {(item.fileName || item.content).length > 60 ? 
+                                  `${(item.fileName || item.content).substring(0, 40)}...${(item.fileName || item.content).includes('.') ? (item.fileName || item.content).substring((item.fileName || item.content).lastIndexOf('.')) : ''}` : 
+                                  (item.fileName || item.content)
+                                }
                               </p>
                             )}
                           </div>

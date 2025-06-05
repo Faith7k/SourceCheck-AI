@@ -49,6 +49,9 @@ export default function Dashboard() {
   const [textContent, setTextContent] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [showFeedback, setShowFeedback] = useState(false)
+  const [selectedImage, setSelectedImage] = useState<File | null>(null)
+  const [imagePreview, setImagePreview] = useState<string | null>(null)
+  const [dragOver, setDragOver] = useState(false)
 
   useEffect(() => {
     setIsClient(true)
@@ -68,9 +71,67 @@ export default function Dashboard() {
     window.location.href = '/login'
   }
 
+  const handleImageUpload = (file: File) => {
+    // File validation
+    const maxSize = 10 * 1024 * 1024 // 10MB
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
+    
+    if (!allowedTypes.includes(file.type)) {
+      setError('Desteklenmeyen dosya formatı. Lütfen JPG, PNG veya WEBP dosyası yükleyin.')
+      return
+    }
+    
+    if (file.size > maxSize) {
+      setError('Dosya boyutu çok büyük. Maksimum 10MB boyutunda dosya yükleyebilirsiniz.')
+      return
+    }
+    
+    setSelectedImage(file)
+    setError(null)
+    
+    // Create preview
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      setImagePreview(e.target?.result as string)
+    }
+    reader.readAsDataURL(file)
+  }
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault()
+    setDragOver(true)
+  }
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault()
+    setDragOver(false)
+  }
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault()
+    setDragOver(false)
+    
+    const files = e.dataTransfer.files
+    if (files.length > 0) {
+      handleImageUpload(files[0])
+    }
+  }
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files
+    if (files && files.length > 0) {
+      handleImageUpload(files[0])
+    }
+  }
+
   const handleAnalyze = async () => {
-    if (!textContent.trim()) {
+    if (activeTab === 'text' && !textContent.trim()) {
       setError('Lütfen analiz edilecek bir metin girin.')
+      return
+    }
+    
+    if (activeTab === 'image' && !selectedImage) {
+      setError('Lütfen analiz edilecek bir görsel yükleyin.')
       return
     }
 
@@ -82,12 +143,24 @@ export default function Dashboard() {
       const savedSettings = localStorage.getItem('sourcecheck-settings')
       const settings = savedSettings ? JSON.parse(savedSettings) : {}
 
-      const response = await fetch('/api/analyze', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
+      let requestBody
+      let headers: Record<string, string> = {}
+
+      if (activeTab === 'image' && selectedImage) {
+        // For image analysis, use FormData
+        const formData = new FormData()
+        formData.append('image', selectedImage)
+        formData.append('type', activeTab)
+        formData.append('settings', JSON.stringify({
+          model: settings.defaultModel || 'mistral-small-latest',
+          apiKey: settings.mistralApiKey
+        }))
+        requestBody = formData
+        // Don't set Content-Type header, let browser set it with boundary
+      } else {
+        // For text analysis, use JSON
+        headers['Content-Type'] = 'application/json'
+        requestBody = JSON.stringify({
           content: textContent,
           type: activeTab,
           settings: {
@@ -95,6 +168,12 @@ export default function Dashboard() {
             apiKey: settings.mistralApiKey
           }
         })
+      }
+
+      const response = await fetch('/api/analyze', {
+        method: 'POST',
+        headers,
+        body: requestBody
       })
 
       const data = await response.json()
@@ -115,10 +194,11 @@ export default function Dashboard() {
         const historyItem = {
           id: Date.now().toString(),
           type: activeTab,
-          content: textContent,
+          content: activeTab === 'image' ? selectedImage?.name || 'Uploaded Image' : textContent,
           confidence: data.result.confidence,
           result: data.result.aiDetection,
-          createdAt: new Date().toISOString()
+          createdAt: new Date().toISOString(),
+          fileName: activeTab === 'image' ? selectedImage?.name : undefined
         }
         
         const existingHistory = JSON.parse(localStorage.getItem('sourcecheck-history') || '[]')
@@ -200,12 +280,12 @@ export default function Dashboard() {
       {/* Sidebar */}
       <div className={`bg-white shadow-lg transition-all duration-300 ${sidebarOpen ? 'w-64' : 'w-16'} md:w-64`}>
         <div className="p-4">
-          <div className="flex items-center">
+          <Link href="/dashboard" className="flex items-center hover:bg-gray-50 rounded-lg p-2 -m-2 transition-colors">
             <Shield className="h-8 w-8 text-blue-600" />
             {(sidebarOpen || (isClient && window?.innerWidth >= 768)) && (
               <span className="ml-3 text-xl font-bold text-gray-900">SourceCheck AI</span>
             )}
-          </div>
+          </Link>
         </div>
         
         <nav className="mt-8">
@@ -335,12 +415,79 @@ export default function Dashboard() {
               )}
 
               {activeTab === 'image' && (
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
-                  <Upload className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-                  <p className="text-gray-600 mb-2">Görsel dosyasını buraya sürükleyin veya tıklayın</p>
-                  <p className="text-sm text-gray-500">PNG, JPG, WEBP (maks. 10MB)</p>
-                  <p className="text-xs text-orange-600 mt-2">Yakında aktif olacak...</p>
-                  <input type="file" accept="image/*" className="hidden" />
+                <div className="space-y-4">
+                  {!selectedImage ? (
+                    <div 
+                      className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors cursor-pointer ${
+                        dragOver 
+                          ? 'border-blue-500 bg-blue-50' 
+                          : 'border-gray-300 hover:border-gray-400'
+                      }`}
+                      onDragOver={handleDragOver}
+                      onDragLeave={handleDragLeave}
+                      onDrop={handleDrop}
+                      onClick={() => document.getElementById('image-upload')?.click()}
+                    >
+                      <Upload className={`h-12 w-12 mx-auto mb-4 ${dragOver ? 'text-blue-500' : 'text-gray-400'}`} />
+                      <p className="text-gray-600 mb-2">
+                        {dragOver ? 'Dosyayı bırakın...' : 'Görsel dosyasını buraya sürükleyin veya tıklayın'}
+                      </p>
+                      <p className="text-sm text-gray-500">PNG, JPG, WEBP (maks. 10MB)</p>
+                      <p className="text-xs text-green-600 mt-2">🎯 AI Tool Detection Aktif!</p>
+                      <input 
+                        id="image-upload"
+                        type="file" 
+                        accept="image/jpeg,image/jpg,image/png,image/webp" 
+                        className="hidden" 
+                        onChange={handleFileSelect}
+                      />
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <div className="border rounded-lg p-4 bg-gray-50">
+                        <div className="flex items-center justify-between mb-4">
+                          <h4 className="font-medium text-gray-900">Yüklenen Görsel</h4>
+                          <button
+                            onClick={() => {
+                              setSelectedImage(null)
+                              setImagePreview(null)
+                              setError(null)
+                            }}
+                            className="text-red-600 hover:text-red-800 text-sm"
+                          >
+                            Kaldır
+                          </button>
+                        </div>
+                        
+                        {imagePreview && (
+                          <div className="mb-4">
+                            <img 
+                              src={imagePreview} 
+                              alt="Preview" 
+                              className="max-w-full max-h-64 rounded-lg object-contain mx-auto"
+                            />
+                          </div>
+                        )}
+                        
+                        <div className="text-sm text-gray-600">
+                          <p className="break-words">
+                            <span className="font-medium">Dosya:</span> 
+                            <span 
+                              className="ml-1" 
+                              title={selectedImage.name}
+                            >
+                              {selectedImage.name.length > 50 ? 
+                                `${selectedImage.name.substring(0, 30)}...${selectedImage.name.substring(selectedImage.name.lastIndexOf('.'))}` : 
+                                selectedImage.name
+                              }
+                            </span>
+                          </p>
+                          <p><span className="font-medium">Boyut:</span> {(selectedImage.size / 1024 / 1024).toFixed(2)} MB</p>
+                          <p><span className="font-medium">Format:</span> {selectedImage.type}</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -356,18 +503,24 @@ export default function Dashboard() {
 
               <button
                 onClick={handleAnalyze}
-                disabled={loading || (activeTab === 'text' && !textContent.trim()) || activeTab !== 'text'}
+                disabled={loading || 
+                  (activeTab === 'text' && !textContent.trim()) || 
+                  (activeTab === 'image' && !selectedImage) ||
+                  activeTab === 'video'
+                }
                 className="mt-6 w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white py-3 px-4 rounded-lg font-medium flex items-center justify-center transition-colors"
               >
                 {loading ? (
                   <>
                     <Loader2 className="animate-spin h-5 w-5 mr-2" />
-                    Analiz Ediliyor...
+                    {activeTab === 'image' ? 'Görsel Analiz Ediliyor...' : 'Analiz Ediliyor...'}
                   </>
                 ) : (
                   <>
                     <Search className="h-5 w-5 mr-2" />
-                    {activeTab === 'text' ? 'Analiz Et' : 'Yakında Aktif'}
+                    {activeTab === 'text' && 'Metni Analiz Et'}
+                    {activeTab === 'image' && (selectedImage ? '🔍 Görseli Analiz Et' : 'Önce görsel yükleyin')}
+                    {activeTab === 'video' && 'Yakında Aktif'}
                   </>
                 )}
               </button>
@@ -378,7 +531,7 @@ export default function Dashboard() {
               <div className="bg-white rounded-lg shadow-sm p-6">
                 <h3 className="text-xl font-semibold mb-4">Analiz Sonuçları</h3>
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   {/* AI Detection */}
                   <div className="border rounded-lg p-4">
                     <div className="flex items-center mb-3">
@@ -417,24 +570,35 @@ export default function Dashboard() {
                       <Info className="h-5 w-5 text-blue-500 mr-2" />
                       <h4 className="font-semibold">Tespit Kaynakları</h4>
                     </div>
-                    <ul className="space-y-2">
-                      {analysis.sources.map((source: string, index: number) => (
-                        <li key={index} className="flex items-start">
-                          <CheckCircle className="h-4 w-4 text-green-500 mr-2 mt-0.5 flex-shrink-0" />
-                          <span className="text-sm text-gray-600">{source}</span>
-                        </li>
-                      ))}
-                    </ul>
+                    <div className="max-h-48 overflow-y-auto">
+                      <ul className="space-y-2">
+                        {analysis.sources.map((source: string, index: number) => (
+                          <li key={index} className="flex items-start">
+                            <CheckCircle className="h-4 w-4 text-green-500 mr-2 mt-0.5 flex-shrink-0" />
+                            <span 
+                              className="text-sm text-gray-600 break-words leading-relaxed"
+                              title={source}
+                            >
+                              {source.length > 80 ? `${source.substring(0, 80)}...` : source}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
                   </div>
                 </div>
 
                 {/* Explanation */}
                 <div className="mt-6 border rounded-lg p-4">
                   <h4 className="font-semibold mb-2">Detaylı Açıklama</h4>
-                  <p className="text-gray-600">{analysis.explanation}</p>
+                  <div className="max-h-64 overflow-y-auto">
+                    <p className="text-gray-600 text-sm leading-relaxed break-words">
+                      {analysis.explanation}
+                    </p>
+                  </div>
                   
                   {analysis.timestamp && (
-                    <p className="text-xs text-gray-400 mt-3">
+                    <p className="text-xs text-gray-400 mt-3 border-t pt-2">
                       Analiz tarihi: {new Date(analysis.timestamp).toLocaleString('tr-TR')}
                     </p>
                   )}
