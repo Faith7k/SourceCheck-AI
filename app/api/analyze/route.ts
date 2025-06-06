@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 interface AnalysisRequest {
   content: string
   type: 'text' | 'image' | 'video'
+  language?: 'tr' | 'en' | 'de'
   settings?: {
     model?: string
     apiKey?: string
@@ -722,135 +723,771 @@ async function analyzeImage(imageFile: File, settings: any) {
   }
 }
 
-// Metadata analysis
+// Enhanced metadata analysis with comprehensive AI system detection
 async function analyzeImageMetadata(buffer: Buffer, fileInfo: any) {
   const analysis = {
     hasEXIF: false,
     software: null as string | null,
     aiSignatures: [] as string[],
     suspiciousMetadata: [] as string[],
-    confidence: 0
+    detectedSystem: null as string | null,
+    confidence: 0,
+    metadataFields: {
+      exif: {} as any,
+      iptc: {} as any,
+      xmp: {} as any,
+      png: {} as any
+    }
   }
   
   try {
-    // Enhanced metadata analysis - independent of filename
-    const hex = buffer.toString('hex', 0, 4000) // Increased buffer for better detection
-    const textContent = buffer.toString('ascii', 0, 4000).toLowerCase()
-    const binaryAnalysis = buffer.slice(0, 4000)
+    console.log('🔍 Starting comprehensive metadata analysis...')
     
-    // Check for AI tool signatures in multiple formats
-    const aiTools = [
-      { name: 'Grok AI (xAI)', signatures: ['grok', 'xai', 'flux', 'elon'] },
-      { name: 'DALL-E', signatures: ['dall-e', 'dalle', 'openai', 'gpt'] },
-      { name: 'Midjourney', signatures: ['midjourney', 'mj', 'discord'] },
-      { name: 'Stable Diffusion', signatures: ['stable-diffusion', 'stablediffusion', 'automatic1111', 'webui'] },
-      { name: 'Adobe Firefly', signatures: ['firefly', 'adobe'] },
-      { name: 'ChatGPT', signatures: ['chatgpt', 'gpt-4', 'openai'] },
-      { name: 'Leonardo AI', signatures: ['leonardo', 'leonardoai'] },
-      { name: 'Bing Image Creator', signatures: ['bing', 'microsoft'] }
+    // Enhanced metadata analysis - independent of filename
+    const hex = buffer.toString('hex', 0, 8000) // Increased buffer for better detection
+    const textContent = buffer.toString('ascii', 0, 8000).toLowerCase()
+    const binaryAnalysis = buffer.slice(0, 8000)
+    
+    // Parse EXIF, IPTC, XMP, and PNG metadata fields
+    await parseAllMetadataFields(buffer, analysis.metadataFields)
+    
+    // Enhanced AI system detection based on comprehensive metadata
+    const aiSystemDetection = detectAISystemFromMetadata(analysis.metadataFields, textContent, hex)
+    
+    if (aiSystemDetection.system) {
+      analysis.detectedSystem = aiSystemDetection.system
+      analysis.confidence += aiSystemDetection.confidence
+      analysis.aiSignatures.push(aiSystemDetection.system)
+      console.log(`✅ AI System detected: ${aiSystemDetection.system} (${aiSystemDetection.confidence}% confidence)`)
+    }
+    
+         // ENHANCED AI PLATFORM DETECTION - 7 Major Platforms
+     const aiPlatforms = [
+       // 1. LEONARDO.AI - Highest Priority
+       { 
+         name: 'Leonardo.AI',
+         confidence: 95,
+         signatures: [
+           'leonardo.ai', 'app.leonardo.ai', 'leonardo ai', 'leonardo', 'leonardoai',
+           'cdn.leonardo.ai', 'generations.leonardo.ai'
+         ],
+         metadataFields: ['creator', 'creatortool', 'software', 'source', 'description'],
+         urlPatterns: [/leonardo\.ai/i, /app\.leonardo\.ai/i],
+         filePatterns: {
+           jpeg: { sizeRange: [300000, 600000], aspectRatios: ['1:1', '16:9', '9:16'] },
+           png: { sizeRange: [400000, 800000] }
+         },
+         specificChecks: ['leonardo url', 'leonardo watermark', 'leonardo metadata']
+       },
+       
+       // 2. MIDJOURNEY - Discord Based
+       { 
+         name: 'MidJourney',
+         confidence: 90,
+         signatures: [
+           'midjourney', 'mj', 'discord', 'cdn.discordapp.com',
+           'midjourney.com', 'mid journey'
+         ],
+         metadataFields: ['software', 'source', 'description'],
+         urlPatterns: [/midjourney/i, /discord/i],
+         filePatterns: {
+           jpeg: { sizeRange: [200000, 500000], perfectSquare: true },
+           png: { sizeRange: [300000, 700000] }
+         },
+         specificChecks: ['discord cdn', 'no exif camera', 'perfect composition']
+       },
+       
+       // 3. DALL-E (OpenAI)
+       { 
+         name: 'DALL-E (OpenAI)',
+         confidence: 92,
+         signatures: [
+           'dall-e', 'dalle', 'openai', 'chatgpt', 'gpt-4',
+           'oaidalleapiprodscus.blob.core.windows.net'
+         ],
+         metadataFields: ['software', 'creatortool', 'softwareagent', 'description'],
+         urlPatterns: [/openai/i, /dall-?e/i],
+         filePatterns: {
+           jpeg: { sizeRange: [150000, 400000], squareFormats: ['1024x1024', '512x512'] },
+           png: { sizeRange: [200000, 500000] }
+         },
+         specificChecks: ['openai signature', 'dalle watermark', 'azure blob storage']
+       },
+       
+       // 4. STABLE DIFFUSION
+       { 
+         name: 'Stable Diffusion',
+         confidence: 94,
+         signatures: [
+           'stable-diffusion', 'stablediffusion', 'automatic1111', 'invokeai', 'webui',
+           'a1111', 'comfyui', 'sd', 'huggingface'
+         ],
+         metadataFields: ['prompt', 'parameters', 'software', 'description', 'workflow'],
+         urlPatterns: [/stable-?diffusion/i, /automatic1111/i, /huggingface/i],
+         filePatterns: {
+           png: { sizeRange: [400000, 1000000], hasPrompt: true },
+           jpeg: { sizeRange: [200000, 600000] }
+         },
+         specificChecks: ['prompt parameters', 'sd metadata', 'workflow json']
+       },
+       
+       // 5. ADOBE FIREFLY
+       { 
+         name: 'Adobe Firefly',
+         confidence: 88,
+         signatures: [
+           'adobe firefly', 'firefly', 'adobe', 'firefly.adobe.com',
+           'adobe.com', 'photoshop firefly'
+         ],
+         metadataFields: ['software', 'creator', 'copyrightnotice', 'source'],
+         urlPatterns: [/firefly\.adobe/i, /adobe.*firefly/i],
+         filePatterns: {
+           jpeg: { sizeRange: [300000, 700000], adobeWatermark: true },
+           png: { sizeRange: [400000, 800000] }
+         },
+         specificChecks: ['adobe watermark', 'firefly signature', 'adobe creative cloud']
+       },
+       
+       // 6. CANVA AI
+       { 
+         name: 'Canva AI',
+         confidence: 85,
+         signatures: [
+           'canva', 'canva ai', 'canva.com', 'magic studio',
+           'text to image', 'canva magic'
+         ],
+         metadataFields: ['software', 'creator', 'source', 'description'],
+         urlPatterns: [/canva/i, /magic.?studio/i],
+         filePatterns: {
+           jpeg: { sizeRange: [150000, 400000], canvaTemplates: true },
+           png: { sizeRange: [200000, 500000] }
+         },
+         specificChecks: ['canva watermark', 'magic studio', 'canva elements']
+       },
+       
+       // 7. GROK AI (xAI)
+       { 
+         name: 'Grok AI (xAI)',
+         confidence: 87,
+         signatures: [
+           'grok', 'xai', 'x.ai', 'flux', 'grok ai',
+           'elon', 'twitter ai', 'x.com'
+         ],
+         metadataFields: ['software', 'description', 'creator', 'source'],
+         urlPatterns: [/grok/i, /x\.ai/i, /flux/i],
+         filePatterns: {
+           jpeg: { sizeRange: [80000, 250000], twitterFormat: true },
+           png: { sizeRange: [100000, 300000] }
+         },
+         specificChecks: ['grok signature', 'flux model', 'x.ai metadata']
+       }
+     ]
+    
+         // ADVANCED AI PLATFORM DETECTION with Enhanced Scoring
+     for (const platform of aiPlatforms) {
+       let matchScore = 0
+       let detectionEvidence: string[] = []
+       
+       console.log(`🔍 Checking platform: ${platform.name}`)
+       
+       // 1. Signature Detection in Raw Content
+       for (const sig of platform.signatures) {
+         if (hex.toLowerCase().includes(sig.toLowerCase()) || textContent.toLowerCase().includes(sig.toLowerCase())) {
+           matchScore += 25
+           detectionEvidence.push(`Signature: ${sig}`)
+           console.log(`🎯 Found signature "${sig}" for ${platform.name}`)
+         }
+       }
+       
+       // 2. URL Pattern Detection
+       if (platform.urlPatterns) {
+         for (const pattern of platform.urlPatterns) {
+           if (pattern.test(textContent) || pattern.test(hex)) {
+             matchScore += 40
+             detectionEvidence.push(`URL pattern matched`)
+             console.log(`🔗 URL pattern match for ${platform.name}`)
+           }
+         }
+       }
+       
+       // 3. Metadata Field Analysis
+       if (platform.metadataFields) {
+         for (const field of platform.metadataFields) {
+           const fieldValue = getMetadataFieldValue(analysis.metadataFields, field)
+           if (fieldValue) {
+             // Check if field value contains platform signatures
+             for (const sig of platform.signatures) {
+               if (fieldValue.toLowerCase().includes(sig.toLowerCase())) {
+                 matchScore += 35
+                 detectionEvidence.push(`Metadata ${field}: ${sig}`)
+                 console.log(`📊 Metadata field "${field}" contains "${sig}" for ${platform.name}`)
+               }
+             }
+           }
+         }
+       }
+       
+       // 4. File Pattern Analysis
+       if (platform.filePatterns && fileInfo) {
+         const fileType = fileInfo.type.includes('jpeg') ? 'jpeg' : 'png'
+         const patterns = platform.filePatterns[fileType]
+         
+         if (patterns) {
+           // Size range check
+           if (patterns.sizeRange && fileInfo.size >= patterns.sizeRange[0] && fileInfo.size <= patterns.sizeRange[1]) {
+             matchScore += 15
+             detectionEvidence.push(`File size pattern match`)
+             console.log(`📁 File size matches ${platform.name} pattern: ${fileInfo.size} bytes`)
+           }
+         }
+       }
+       
+       // 5. Platform-Specific Checks
+       if (platform.specificChecks) {
+         for (const check of platform.specificChecks) {
+           if (textContent.includes(check.toLowerCase()) || hex.includes(check.toLowerCase())) {
+             matchScore += 20
+             detectionEvidence.push(`Specific check: ${check}`)
+             console.log(`✅ Specific check "${check}" passed for ${platform.name}`)
+           }
+         }
+       }
+       
+       // Apply platform confidence multiplier
+       const finalScore = matchScore * (platform.confidence / 100)
+       
+       console.log(`📊 ${platform.name} final score: ${finalScore} (raw: ${matchScore}, confidence: ${platform.confidence}%)`)
+       
+       if (finalScore >= 20) {
+         analysis.aiSignatures.push(platform.name)
+         analysis.confidence += Math.min(40, finalScore)
+         
+         if (!analysis.detectedSystem || finalScore > 50) {
+           analysis.detectedSystem = platform.name
+           console.log(`🎯 NEW TOP DETECTION: ${platform.name} with score ${finalScore}`)
+         }
+       }
+     }
+    
+    // Enhanced metadata checks
+    await performEnhancedMetadataChecks(buffer, fileInfo, analysis)
+    
+    console.log('📊 Metadata analysis complete:', {
+      detectedSystem: analysis.detectedSystem,
+      aiSignatures: analysis.aiSignatures,
+      confidence: analysis.confidence
+    })
+    
+    return analysis
+    
+  } catch (error) {
+    console.error('❌ Enhanced metadata analysis error:', error)
+    return analysis
+  }
+}
+
+// Parse all metadata fields comprehensively
+async function parseAllMetadataFields(buffer: Buffer, metadataFields: any) {
+  try {
+    console.log('📖 Parsing comprehensive metadata fields...')
+    
+    // EXIF data extraction
+    metadataFields.exif = await parseEXIFData(buffer)
+    
+    // IPTC data extraction  
+    metadataFields.iptc = await parseIPTCData(buffer)
+    
+    // XMP data extraction
+    metadataFields.xmp = await parseXMPData(buffer)
+    
+    // PNG tEXt chunks extraction
+    if (buffer.toString('hex', 0, 8) === '89504e470d0a1a0a') {
+      metadataFields.png = await parsePNGTextChunks(buffer)
+    }
+    
+    console.log('✅ Metadata parsing complete')
+    
+  } catch (error) {
+    console.error('❌ Metadata parsing error:', error)
+  }
+}
+
+// Detect AI system from parsed metadata
+function detectAISystemFromMetadata(metadataFields: any, textContent: string, hex: string) {
+  const detection = {
+    system: null as string | null,
+    confidence: 0,
+    evidence: [] as string[]
+  }
+  
+  // EXIF-based detection
+  const software = metadataFields.exif?.Software || metadataFields.exif?.CameraModelName || ''
+  const imageDescription = metadataFields.exif?.ImageDescription || ''
+  
+  // IPTC-based detection
+  const creator = metadataFields.iptc?.Creator || ''
+  const copyrightNotice = metadataFields.iptc?.CopyrightNotice || ''
+  const source = metadataFields.iptc?.Source || ''
+  
+  // XMP-based detection
+  const creatorTool = metadataFields.xmp?.CreatorTool || ''
+  const softwareAgent = metadataFields.xmp?.SoftwareAgent || ''
+  const description = metadataFields.xmp?.Description || ''
+  
+  // PNG tEXt chunk detection
+  const prompt = metadataFields.png?.prompt || ''
+  const parameters = metadataFields.png?.parameters || ''
+  const pngSoftware = metadataFields.png?.software || ''
+  
+  // Combine all text for analysis
+  const allMetadataText = [
+    software, imageDescription, creator, copyrightNotice, source,
+    creatorTool, softwareAgent, description, prompt, parameters, pngSoftware
+  ].join(' ').toLowerCase()
+  
+  console.log('🔍 Combined metadata text (first 200 chars):', allMetadataText.substring(0, 200))
+  
+  // AI System Detection Rules (Priority Order)
+  const detectionRules = [
+    {
+      system: 'Leonardo.AI',
+      confidence: 95,
+      patterns: ['leonardo.ai', 'app.leonardo.ai', 'leonardo ai', 'leonardo', 'leonardoai'],
+      fields: ['creator', 'creatortool', 'software', 'source']
+    },
+    {
+      system: 'Stable Diffusion',
+      confidence: 95,
+      patterns: ['stable-diffusion', 'stablediffusion', 'automatic1111', 'invokeai', 'webui'],
+      fields: ['prompt', 'parameters', 'software']
+    },
+    {
+      system: 'DALL-E (OpenAI)',
+      confidence: 90,
+      patterns: ['openai', 'dall-e', 'dalle'],
+      fields: ['software', 'creatortool', 'softwareagent']
+    },
+    {
+      system: 'Adobe Firefly',
+      confidence: 88,
+      patterns: ['adobe firefly', 'firefly'],
+      fields: ['software', 'creator']
+    },
+    {
+      system: 'MidJourney',
+      confidence: 85,
+      patterns: ['midjourney', 'mj'],
+      fields: ['software', 'creator', 'source']
+    },
+    {
+      system: 'Canva AI',
+      confidence: 82,
+      patterns: ['canva'],
+      fields: ['software', 'creator', 'source']
+    },
+    {
+      system: 'Fotor AI',
+      confidence: 80,
+      patterns: ['fotor'],
+      fields: ['software', 'creator']
+    }
+  ]
+  
+  for (const rule of detectionRules) {
+    for (const pattern of rule.patterns) {
+      if (allMetadataText.includes(pattern)) {
+        detection.system = rule.system
+        detection.confidence = rule.confidence
+        detection.evidence.push(`Found "${pattern}" in metadata`)
+        console.log(`✅ AI System detected via metadata: ${rule.system}`)
+        return detection
+      }
+    }
+  }
+  
+  return detection
+}
+
+// Get metadata field value by name
+function getMetadataFieldValue(metadataFields: any, fieldName: string): string {
+  const field = fieldName.toLowerCase()
+  
+  // Check EXIF
+  if (metadataFields.exif) {
+    if (field === 'software' && metadataFields.exif.Software) return metadataFields.exif.Software
+    if (field === 'description' && metadataFields.exif.ImageDescription) return metadataFields.exif.ImageDescription
+  }
+  
+  // Check IPTC
+  if (metadataFields.iptc) {
+    if (field === 'creator' && metadataFields.iptc.Creator) return metadataFields.iptc.Creator
+    if (field === 'source' && metadataFields.iptc.Source) return metadataFields.iptc.Source
+    if (field === 'copyrightnotice' && metadataFields.iptc.CopyrightNotice) return metadataFields.iptc.CopyrightNotice
+  }
+  
+  // Check XMP
+  if (metadataFields.xmp) {
+    if (field === 'creatortool' && metadataFields.xmp.CreatorTool) return metadataFields.xmp.CreatorTool
+    if (field === 'softwareagent' && metadataFields.xmp.SoftwareAgent) return metadataFields.xmp.SoftwareAgent
+    if (field === 'description' && metadataFields.xmp.Description) return metadataFields.xmp.Description
+  }
+  
+  // Check PNG
+  if (metadataFields.png) {
+    if (field === 'prompt' && metadataFields.png.prompt) return metadataFields.png.prompt
+    if (field === 'parameters' && metadataFields.png.parameters) return metadataFields.png.parameters
+    if (field === 'software' && metadataFields.png.software) return metadataFields.png.software
+  }
+  
+  return ''
+}
+
+// Enhanced metadata checks
+async function performEnhancedMetadataChecks(buffer: Buffer, fileInfo: any, analysis: any) {
+  // Check for lack of natural camera metadata in JPEG files
+  if (fileInfo.type.includes('jpg') || fileInfo.type.includes('jpeg')) {
+    const hasCameraData = analysis.metadataFields.exif?.Make || 
+                         analysis.metadataFields.exif?.Model || 
+                         analysis.metadataFields.exif?.CameraModelName
+    
+    if (!hasCameraData) {
+      analysis.suspiciousMetadata.push('JPEG missing camera metadata (AI generation indicator)')
+      analysis.confidence += 15
+    }
+    
+    // Check for missing GPS data
+    const hasGPS = analysis.metadataFields.exif?.GPS || 
+                   analysis.metadataFields.exif?.GPSLatitude
+    
+    if (!hasGPS) {
+      analysis.suspiciousMetadata.push('Missing GPS metadata (common in AI images)')
+      analysis.confidence += 8
+    }
+  }
+  
+  // Check for AI-specific metadata patterns
+  const allMetadata = JSON.stringify(analysis.metadataFields).toLowerCase()
+  
+  if (allMetadata.includes('generated') || allMetadata.includes('artificial') || 
+      allMetadata.includes('synthetic') || allMetadata.includes('created')) {
+    analysis.suspiciousMetadata.push('AI generation keywords found in metadata')
+    analysis.confidence += 25
+  }
+  
+  // Check for missing timestamp data
+  const hasTimestamp = analysis.metadataFields.exif?.DateTime || 
+                      analysis.metadataFields.exif?.DateTimeOriginal ||
+                      analysis.metadataFields.iptc?.DateCreated
+  
+  if (!hasTimestamp && (fileInfo.type.includes('jpg') || fileInfo.type.includes('jpeg'))) {
+    analysis.suspiciousMetadata.push('Missing timestamp metadata')
+    analysis.confidence += 10
+  }
+}
+
+// Parse EXIF data
+async function parseEXIFData(buffer: Buffer) {
+  try {
+    // Enhanced EXIF parsing implementation
+    const exifData: any = {}
+    
+    // First, scan entire buffer for Leonardo.ai signatures
+    const fullText = buffer.toString('utf8', 0, Math.min(10000, buffer.length))
+    const fullAscii = buffer.toString('ascii', 0, Math.min(10000, buffer.length))
+    
+    console.log('🔍 Scanning for Leonardo.ai signatures in full buffer...')
+    
+    // Leonardo.ai URL detection
+    const leonardoMatch = fullText.match(/leonardo\.ai|app\.leonardo\.ai/i) || 
+                         fullAscii.match(/leonardo\.ai|app\.leonardo\.ai/i)
+    if (leonardoMatch) {
+      exifData.Source = 'Leonardo.AI'
+      exifData.Software = 'Leonardo.AI'
+      console.log('✅ Leonardo.AI signature found in buffer!')
+    }
+    
+    // Look for other AI signatures in buffer
+    if (fullText.includes('midjourney') || fullAscii.includes('midjourney')) {
+      exifData.Software = 'MidJourney'
+      console.log('✅ MidJourney signature found in buffer!')
+    }
+    
+    if (fullText.includes('dall-e') || fullText.includes('openai') || 
+        fullAscii.includes('dall-e') || fullAscii.includes('openai')) {
+      exifData.Software = 'DALL-E (OpenAI)'
+      console.log('✅ DALL-E signature found in buffer!')
+    }
+    
+    if (fullText.includes('stable-diffusion') || fullText.includes('automatic1111') ||
+        fullAscii.includes('stable-diffusion') || fullAscii.includes('automatic1111')) {
+      exifData.Software = 'Stable Diffusion'
+      console.log('✅ Stable Diffusion signature found in buffer!')
+    }
+    
+    // Look for EXIF marker in JPEG
+    if (buffer[0] === 0xFF && buffer[1] === 0xD8) {
+      console.log('📷 JPEG file detected, scanning for metadata segments...')
+      
+      // Scan all APP segments (APP0-APP15)
+      let offset = 2
+      while (offset < buffer.length - 4) {
+        if (buffer[offset] === 0xFF) {
+          const marker = buffer[offset + 1]
+          
+          // APP1 (EXIF), APP13 (IPTC), APP2 (ICC), etc.
+          if (marker >= 0xE0 && marker <= 0xEF) {
+            const segmentLength = buffer.readUInt16BE(offset + 2)
+            const segmentData = buffer.slice(offset + 4, offset + 4 + segmentLength)
+            
+            console.log(`📄 Found APP${marker - 0xE0} segment, length: ${segmentLength}`)
+            
+            // Parse segment content
+            const segmentText = segmentData.toString('utf8', 0, Math.min(1000, segmentData.length))
+            const segmentAscii = segmentData.toString('ascii', 0, Math.min(1000, segmentData.length))
+            
+            // Look for AI signatures in this segment
+            if (segmentText.includes('leonardo') || segmentAscii.includes('leonardo')) {
+              exifData.CreatorTool = 'Leonardo.AI'
+              exifData.Software = 'Leonardo.AI'
+              console.log(`✅ Leonardo.AI found in APP${marker - 0xE0} segment!`)
+            }
+            
+            // Look for "Exif\0\0" identifier in APP1
+            if (marker === 0xE1 && segmentData.toString('ascii', 0, 4) === 'Exif') {
+              console.log('📷 EXIF segment found, parsing...')
+              const parsedExif = parseEXIFSegment(segmentData.slice(6))
+              Object.assign(exifData, parsedExif)
+            }
+            
+            offset += 4 + segmentLength
+          } else {
+            offset++
+          }
+        } else {
+          offset++
+        }
+        
+        // Safety check
+        if (offset > 50000) break
+      }
+    }
+    
+    console.log('📊 Final EXIF data:', exifData)
+    return exifData
+  } catch (error) {
+    console.error('❌ EXIF parsing error:', error)
+    return {}
+  }
+}
+
+// Parse IPTC data
+async function parseIPTCData(buffer: Buffer) {
+  try {
+    // Enhanced IPTC parsing implementation
+    const iptcData: any = {}
+    
+    // IPTC data is usually embedded in JPEG APP13 segments
+    const textContent = buffer.toString('ascii', 0, 8000)
+    const utf8Content = buffer.toString('utf8', 0, 8000)
+    
+    console.log('🔍 Scanning IPTC data for AI signatures...')
+    
+    // Leonardo.ai detection in IPTC
+    if (textContent.includes('leonardo') || utf8Content.includes('leonardo.ai')) {
+      iptcData.Creator = 'Leonardo.AI'
+      iptcData.Source = 'https://app.leonardo.ai/'
+      console.log('✅ Leonardo.AI found in IPTC!')
+    }
+    
+    // Look for common IPTC fields in text
+    if (textContent.includes('Creator')) {
+      console.log('👤 IPTC Creator field detected')
+      
+      // Try to extract creator value
+      const creatorMatch = textContent.match(/Creator[:\s]+([^\x00\n\r]+)/i)
+      if (creatorMatch) {
+        iptcData.Creator = creatorMatch[1].trim()
+        console.log(`👤 Creator: ${iptcData.Creator}`)
+      }
+    }
+    
+    // Look for copyright/source information
+    if (textContent.includes('Copyright') || textContent.includes('Source')) {
+      const copyrightMatch = textContent.match(/Copyright[:\s]+([^\x00\n\r]+)/i)
+      if (copyrightMatch) {
+        iptcData.CopyrightNotice = copyrightMatch[1].trim()
+        console.log(`©️ Copyright: ${iptcData.CopyrightNotice}`)
+      }
+      
+      const sourceMatch = textContent.match(/Source[:\s]+([^\x00\n\r]+)/i)
+      if (sourceMatch) {
+        iptcData.Source = sourceMatch[1].trim()
+        console.log(`🔗 Source: ${iptcData.Source}`)
+      }
+    }
+    
+    // Scan for AI tool signatures
+    const aiPatterns = [
+      { pattern: /leonardo/i, tool: 'Leonardo.AI' },
+      { pattern: /midjourney/i, tool: 'MidJourney' },
+      { pattern: /dall-?e/i, tool: 'DALL-E' },
+      { pattern: /stable.?diffusion/i, tool: 'Stable Diffusion' },
+      { pattern: /firefly/i, tool: 'Adobe Firefly' }
     ]
     
-    // Check both hex and text content
-    for (const tool of aiTools) {
-      for (const sig of tool.signatures) {
-        if (hex.toLowerCase().includes(sig) || textContent.includes(sig)) {
-          analysis.aiSignatures.push(tool.name)
-          analysis.confidence += 35
+    for (const { pattern, tool } of aiPatterns) {
+      if (pattern.test(textContent) || pattern.test(utf8Content)) {
+        iptcData.Creator = tool
+        console.log(`🤖 ${tool} signature found in IPTC!`)
+      }
+    }
+    
+    console.log('📊 Final IPTC data:', iptcData)
+    return iptcData
+  } catch (error) {
+    console.error('❌ IPTC parsing error:', error)
+    return {}
+  }
+}
+
+// Parse XMP data
+async function parseXMPData(buffer: Buffer) {
+  try {
+    // XMP data is usually stored as XML - scan larger buffer
+    const textContent = buffer.toString('utf8', 0, 15000)
+    const xmpData: any = {}
+    
+    console.log('🔍 Scanning for XMP data and AI signatures...')
+    
+    // Enhanced Leonardo.ai detection in XMP
+    if (textContent.includes('leonardo.ai') || textContent.includes('app.leonardo.ai')) {
+      xmpData.CreatorTool = 'Leonardo.AI'
+      xmpData.Source = 'https://app.leonardo.ai/'
+      console.log('✅ Leonardo.AI URL found in XMP!')
+    }
+    
+    // Look for XMP XML content
+    const xmpMatch = textContent.match(/<x:xmpmeta[\s\S]*?<\/x:xmpmeta>/)
+    if (xmpMatch) {
+      console.log('📄 XMP metadata found')
+      
+      // Extract common XMP fields
+      const creatorToolMatch = textContent.match(/xmp:CreatorTool="([^"]+)"/i)
+      if (creatorToolMatch) {
+        xmpData.CreatorTool = creatorToolMatch[1]
+        console.log(`🛠️ CreatorTool: ${creatorToolMatch[1]}`)
+      }
+      
+      const descriptionMatch = textContent.match(/dc:description.*?<rdf:li[^>]*>([^<]+)/i)
+      if (descriptionMatch) {
+        xmpData.Description = descriptionMatch[1]
+        console.log(`📝 Description: ${descriptionMatch[1]}`)
+      }
+      
+      // Look for source/origin
+      const sourceMatch = textContent.match(/dc:source.*?<rdf:li[^>]*>([^<]+)/i) ||
+                         textContent.match(/photoshop:Source="([^"]+)"/i)
+      if (sourceMatch) {
+        xmpData.Source = sourceMatch[1]
+        console.log(`🔗 Source: ${sourceMatch[1]}`)
+      }
+    }
+    
+    // Fallback: scan for URL patterns anywhere in buffer
+    const urlMatches = textContent.match(/https?:\/\/[^\s"'<>]+/g)
+    if (urlMatches) {
+      for (const url of urlMatches) {
+        if (url.includes('leonardo.ai')) {
+          xmpData.Source = url
+          xmpData.CreatorTool = 'Leonardo.AI'
+          console.log(`🔗 Leonardo.AI URL found: ${url}`)
+        } else if (url.includes('midjourney')) {
+          xmpData.Source = url
+          xmpData.CreatorTool = 'MidJourney'
+        } else if (url.includes('openai.com') || url.includes('dalle')) {
+          xmpData.Source = url
+          xmpData.CreatorTool = 'DALL-E'
         }
       }
     }
     
-    // Enhanced metadata checks
-    // Check for lack of natural camera metadata in JPEG files
-    if (fileInfo.type.includes('jpg') || fileInfo.type.includes('jpeg')) {
-      const hasCameraData = hex.includes('camera') || hex.includes('model') || 
-                           hex.includes('canon') || hex.includes('nikon') || 
-                           hex.includes('sony') || hex.includes('apple') ||
-                           textContent.includes('camera') || textContent.includes('iphone')
-      
-      if (!hasCameraData) {
-        analysis.suspiciousMetadata.push('JPEG dosyasında kamera metadatası yok (AI üretimi)')
-        analysis.confidence += 15
-      }
-    }
-    
-    // Check for AI-specific metadata patterns
-    if (textContent.includes('generated') || textContent.includes('artificial') || 
-        textContent.includes('synthetic') || textContent.includes('created')) {
-      analysis.suspiciousMetadata.push('AI üretim işaretleri metadatada bulundu')
-      analysis.confidence += 25
-    }
-    
-    // Check for lack of GPS, timestamp or other natural metadata
-    const hasNaturalMetadata = hex.includes('gps') || hex.includes('timestamp') || 
-                               hex.includes('datetime') || textContent.includes('location')
-    
-         if (!hasNaturalMetadata && (fileInfo.type.includes('jpg') || fileInfo.type.includes('jpeg'))) {
-       analysis.suspiciousMetadata.push('Doğal metadata eksik (GPS, timestamp vs.)')
-       analysis.confidence += 12
-     }
-     
-     // ADVANCED: Binary pattern analysis for AI detection (filename independent)
-     // Check for specific AI generation patterns in binary data
-     
-     // PNG specific AI patterns
-     if (fileInfo.type.includes('png')) {
-       // Check PNG chunk patterns typical of AI generation
-       const pngSignature = hex.substring(0, 16) // PNG header
-       
-       // Look for unusual chunk arrangements typical of AI tools
-       if (hex.includes('7465787400') || hex.includes('744578740')) { // tEXt chunks
-         analysis.suspiciousMetadata.push('PNG tEXt chunk bulundu (AI tool signature olabilir)')
-         analysis.confidence += 15
-       }
-       
-       // Check for missing standard PNG chunks that real photos usually have
-       if (!hex.includes('74494d45') && !hex.includes('7048597300')) { // tIME, pHYs chunks
-         analysis.suspiciousMetadata.push('PNG standart chunk\'ları eksik (AI üretimi)')
-         analysis.confidence += 18
-       }
-       
-       // AI tools often create PNGs with specific IDAT patterns
-       const idatPattern = hex.indexOf('49444154') // IDAT chunk
-       if (idatPattern > 0) {
-         // Check compression patterns
-         const compressionData = hex.substring(idatPattern + 8, idatPattern + 100)
-         if (compressionData.match(/^(78da|789c)/)) { // Common AI compression headers
-           analysis.suspiciousMetadata.push('AI tipik PNG compression pattern')
-           analysis.confidence += 20
-         }
-       }
-     }
-     
-     // Universal AI detection patterns (works for all formats)
-     // Check for mathematical perfection in file structure
-     const firstBytes = buffer.slice(0, 100)
-     let entropy = 0
-     const byteFreq = new Array(256).fill(0)
-     
-     for (let i = 0; i < firstBytes.length; i++) {
-       byteFreq[firstBytes[i]]++
-     }
-     
-     for (let i = 0; i < 256; i++) {
-       if (byteFreq[i] > 0) {
-         const prob = byteFreq[i] / firstBytes.length
-         entropy -= prob * Math.log2(prob)
-       }
-     }
-     
-     // AI generated images often have specific entropy patterns
-     if (entropy < 6.5 || entropy > 7.8) {
-       analysis.suspiciousMetadata.push(`Şüpheli entropy pattern (${entropy.toFixed(2)})`)
-       analysis.confidence += 12
-     }
-    
-    console.log('📊 Metadata analizi:', analysis)
-    return analysis
-    
+    console.log('📊 Final XMP data:', xmpData)
+    return xmpData
   } catch (error) {
-    console.error('❌ Metadata analiz hatası:', error)
-    return analysis
+    console.error('❌ XMP parsing error:', error)
+    return {}
+  }
+}
+
+// Parse PNG tEXt chunks
+async function parsePNGTextChunks(buffer: Buffer) {
+  try {
+    const pngData: any = {}
+    
+    if (buffer.toString('hex', 0, 8) !== '89504e470d0a1a0a') {
+      return pngData
+    }
+    
+    let offset = 8
+    while (offset < buffer.length - 8) {
+      const chunkLength = buffer.readUInt32BE(offset)
+      const chunkType = buffer.toString('ascii', offset + 4, offset + 8)
+      
+      if (chunkType === 'tEXt' || chunkType === 'iTXt' || chunkType === 'zTXt') {
+        const chunkData = buffer.slice(offset + 8, offset + 8 + chunkLength)
+        
+        if (chunkType === 'tEXt') {
+          // Parse tEXt chunk
+          const nullIndex = chunkData.indexOf(0)
+          if (nullIndex > 0) {
+            const keyword = chunkData.toString('ascii', 0, nullIndex)
+            const text = chunkData.toString('utf8', nullIndex + 1)
+            
+            console.log(`📝 PNG tEXt: ${keyword} = ${text.substring(0, 100)}...`)
+            
+            if (keyword.toLowerCase().includes('prompt')) {
+              pngData.prompt = text
+            } else if (keyword.toLowerCase().includes('parameters')) {
+              pngData.parameters = text
+            } else if (keyword.toLowerCase().includes('software')) {
+              pngData.software = text
+            }
+          }
+        }
+      }
+      
+      offset += 12 + chunkLength
+      
+      // Safety break
+      if (offset > buffer.length || chunkLength > 1000000) break
+    }
+    
+    return pngData
+  } catch (error) {
+    console.error('❌ PNG text chunk parsing error:', error)
+    return {}
+  }
+}
+
+// Parse EXIF segment
+function parseEXIFSegment(exifBuffer: Buffer) {
+  try {
+    const exifData: any = {}
+    
+    // This is a simplified EXIF parser
+    // In a real implementation, you'd parse the TIFF structure properly
+    
+    const textContent = exifBuffer.toString('ascii', 0, Math.min(1000, exifBuffer.length))
+    
+    // Look for common software signatures
+    if (textContent.includes('Adobe') || textContent.includes('Photoshop')) {
+      exifData.Software = 'Adobe Photoshop'
+    }
+    
+    return exifData
+  } catch (error) {
+    console.error('❌ EXIF segment parsing error:', error)
+    return {}
   }
 }
 
@@ -1224,16 +1861,22 @@ function combineImageAnalysis(metadata: any, visual: any, tool: any, fileInfo: a
   let explanation = ''
   let sources: string[] = []
   
-  // Enhanced confidence calculation
+  // Enhanced confidence calculation with new detection system
   let baseConfidence = metadata.confidence + visual.confidence + tool.confidence
   
-  // Apply multipliers for strong indicators
-  if (tool.detectedTool && tool.detectedTool.includes('ChatGPT')) {
-    baseConfidence = Math.min(95, baseConfidence * 1.3) // Strong multiplier for ChatGPT detection
+  // Priority boost for metadata-based detection (most reliable)
+  if (metadata.detectedSystem) {
+    baseConfidence = Math.min(95, baseConfidence * 1.5) // Strong multiplier for specific AI system detection
+    console.log(`🎯 Specific AI system detected: ${metadata.detectedSystem}`)
   }
   
   if (metadata.aiSignatures.length > 0) {
-    baseConfidence = Math.min(95, baseConfidence * 1.2) // Metadata is very reliable
+    baseConfidence = Math.min(95, baseConfidence * 1.3) // Metadata signatures are very reliable
+  }
+  
+  // Apply multipliers for strong indicators
+  if (tool.detectedTool && tool.detectedTool.includes('ChatGPT')) {
+    baseConfidence = Math.min(95, baseConfidence * 1.2) // Strong multiplier for ChatGPT detection
   }
   
   totalConfidence = Math.min(95, Math.max(5, baseConfidence)) // Cap between 5-95
@@ -1247,53 +1890,80 @@ function combineImageAnalysis(metadata: any, visual: any, tool: any, fileInfo: a
     aiDetection = 'uncertain'
   }
   
-  // Special case: If we detected specific AI tool, minimum 70% confidence
-  if (tool.detectedTool && !tool.detectedTool.includes('AI Generated')) {
+  // Special case: If we detected specific AI system, minimum 70% confidence
+  if (metadata.detectedSystem) {
+    totalConfidence = Math.max(75, totalConfidence)
+    aiDetection = 'ai-generated'
+  } else if (tool.detectedTool && !tool.detectedTool.includes('AI Generated')) {
     totalConfidence = Math.max(70, totalConfidence)
     aiDetection = 'ai-generated'
   }
   
-  // Build explanation
-  if (tool.detectedTool) {
-    explanation = `🤖 Bu görsel ${tool.detectedTool} AI aracı ile üretilmiş olabilir. ${tool.indicators.join(', ')}. `
+  // Build comprehensive explanation
+  if (metadata.detectedSystem) {
+    explanation = `🤖 AI SYSTEM DETECTED: ${metadata.detectedSystem} sistemi ile üretilmiş görsel tespit edildi. `
+  } else if (tool.detectedTool) {
+    explanation = `🔧 AI TOOL DETECTED: ${tool.detectedTool} AI aracı ile üretilmiş olabilir. `
   } else {
-    explanation = `🔍 Görsel analizi yapıldı. `
+    explanation = `🔍 COMPREHENSIVE ANALYSIS: Görsel detaylı analiz edildi. `
   }
   
   explanation += `Dosya boyutu: ${(fileInfo.size / 1024 / 1024).toFixed(2)} MB, Format: ${fileInfo.type}. `
   
+  // Add metadata analysis results
   if (metadata.aiSignatures.length > 0) {
-    explanation += `Metadata'da AI imzaları bulundu: ${metadata.aiSignatures.join(', ')}. `
+    explanation += `Metadata AI imzaları: ${metadata.aiSignatures.join(', ')}. `
+  }
+  
+  if (metadata.suspiciousMetadata.length > 0) {
+    explanation += `Şüpheli metadata: ${metadata.suspiciousMetadata.slice(0, 2).join(', ')}. `
   }
   
   if (visual.artificialPatterns.length > 0) {
-    explanation += `Şüpheli pattern'ler: ${visual.artificialPatterns.join(', ')}.`
+    explanation += `Görsel pattern'ler: ${visual.artificialPatterns.slice(0, 2).join(', ')}.`
   }
   
-  // Build sources
+  // Build comprehensive sources
   sources = [
-    '🔍 Metadata analizi yapıldı',
-    '👁️ Görsel pattern analizi tamamlandı',
-    '🔧 AI tool detection çalıştırıldı',
-    `📁 Dosya analizi: ${fileInfo.name}`,
-    `📊 Toplam güven skoru: %${totalConfidence}`
+    '🔍 Enhanced metadata analysis (EXIF, IPTC, XMP, PNG)',
+    '👁️ Advanced visual pattern analysis',
+    '🔧 Multi-system AI tool detection',
+    `📁 File analysis: ${fileInfo.name}`,
+    `📊 Final confidence: ${totalConfidence}%`
   ]
   
-  if (tool.detectedTool) {
-    sources.unshift(`🤖 Tespit edilen AI aracı: ${tool.detectedTool}`)
+  if (metadata.detectedSystem) {
+    sources.unshift(`🎯 AI System: ${metadata.detectedSystem}`)
+  } else if (tool.detectedTool) {
+    sources.unshift(`🤖 AI Tool: ${tool.detectedTool}`)
+  }
+  
+  // Add specific detection evidence
+  if (metadata.metadataFields.png?.prompt) {
+    sources.push('📝 AI prompt found in PNG metadata')
+  }
+  
+  if (metadata.metadataFields.exif?.Software) {
+    sources.push(`💻 Software: ${metadata.metadataFields.exif.Software}`)
   }
   
   return {
     confidence: totalConfidence,
     aiDetection,
     explanation,
-    sources,
-    model: 'Image AI Detection System',
+    sources: sources.slice(0, 6), // Limit to 6 sources
+    model: 'Advanced AI Detection System v2.0',
     timestamp: new Date().toISOString(),
+    detectedSystem: metadata.detectedSystem,
     detectedTool: tool.detectedTool,
-    metadata: metadata,
+    metadata: {
+      ...metadata,
+      parsedFields: metadata.metadataFields
+    },
     visual: visual,
-    tool: tool
+    tool: tool,
+    aiSignatures: metadata.aiSignatures,
+    suspiciousMetadata: metadata.suspiciousMetadata
   }
 }
 

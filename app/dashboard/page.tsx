@@ -19,6 +19,8 @@ import {
   Info,
   Loader2
 } from 'lucide-react'
+import { useTranslations, useLanguage } from '@/lib/language-context'
+import { LanguageSwitcher } from '@/components/ui/language-switcher'
 
 interface AnalysisResult {
   confidence: number
@@ -40,6 +42,8 @@ interface DemoUser {
 }
 
 export default function Dashboard() {
+  const { t, tDashboard, tAnalysis, tNavigation } = useTranslations()
+  const { currentLanguage } = useLanguage()
   const [activeTab, setActiveTab] = useState('text')
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null)
@@ -77,12 +81,12 @@ export default function Dashboard() {
     const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
     
     if (!allowedTypes.includes(file.type)) {
-      setError('Desteklenmeyen dosya formatı. Lütfen JPG, PNG veya WEBP dosyası yükleyin.')
+      setError(tDashboard('unsupportedFormat'))
       return
     }
     
     if (file.size > maxSize) {
-      setError('Dosya boyutu çok büyük. Maksimum 10MB boyutunda dosya yükleyebilirsiniz.')
+      setError(tDashboard('fileTooLarge'))
       return
     }
     
@@ -126,12 +130,12 @@ export default function Dashboard() {
 
   const handleAnalyze = async () => {
     if (activeTab === 'text' && !textContent.trim()) {
-      setError('Lütfen analiz edilecek bir metin girin.')
+      setError(tDashboard('pleaseEnterText'))
       return
     }
     
     if (activeTab === 'image' && !selectedImage) {
-      setError('Lütfen analiz edilecek bir görsel yükleyin.')
+      setError(tDashboard('pleaseUploadImage'))
       return
     }
 
@@ -151,6 +155,7 @@ export default function Dashboard() {
         const formData = new FormData()
         formData.append('image', selectedImage)
         formData.append('type', activeTab)
+        formData.append('language', currentLanguage)
         formData.append('settings', JSON.stringify({
           model: settings.defaultModel || 'mistral-small-latest',
           apiKey: settings.mistralApiKey
@@ -163,6 +168,7 @@ export default function Dashboard() {
         requestBody = JSON.stringify({
           content: textContent,
           type: activeTab,
+          language: currentLanguage,
           settings: {
             model: settings.defaultModel || 'mistral-small-latest',
             apiKey: settings.mistralApiKey
@@ -268,10 +274,10 @@ export default function Dashboard() {
 
   const getResultText = (result: string) => {
     switch (result) {
-      case 'ai-generated': return '🤖 AI Üretimi'
-      case 'human-generated': return '👤 İnsan Üretimi'
-      case 'uncertain': return '❓ Belirsiz'
-      default: return '❓ Bilinmiyor'
+      case 'ai-generated': return `🤖 ${t('aiGenerated')}`
+      case 'human-generated': return `👤 ${t('humanGenerated')}`
+      case 'uncertain': return `❓ ${t('uncertain')}`
+      default: return '❓ ' + t('uncertain')
     }
   }
 
@@ -292,15 +298,15 @@ export default function Dashboard() {
           <div className="px-4 space-y-2">
             <Link href="/dashboard" className="flex items-center px-4 py-2 text-blue-600 bg-blue-50 rounded-lg">
               <Search className="h-5 w-5" />
-              {(sidebarOpen || (isClient && window?.innerWidth >= 768)) && <span className="ml-3">Analiz Et</span>}
+              {(sidebarOpen || (isClient && window?.innerWidth >= 768)) && <span className="ml-3">{t('analyze')}</span>}
             </Link>
             <Link href="/dashboard/history" className="flex items-center px-4 py-2 text-gray-600 hover:bg-gray-50 rounded-lg">
               <History className="h-5 w-5" />
-              {(sidebarOpen || (isClient && window?.innerWidth >= 768)) && <span className="ml-3">Geçmiş</span>}
+              {(sidebarOpen || (isClient && window?.innerWidth >= 768)) && <span className="ml-3">{tNavigation('history')}</span>}
             </Link>
             <Link href="/dashboard/settings" className="flex items-center px-4 py-2 text-gray-600 hover:bg-gray-50 rounded-lg">
               <Settings className="h-5 w-5" />
-              {(sidebarOpen || (isClient && window?.innerWidth >= 768)) && <span className="ml-3">Ayarlar</span>}
+              {(sidebarOpen || (isClient && window?.innerWidth >= 768)) && <span className="ml-3">{tNavigation('settings')}</span>}
             </Link>
           </div>
         </nav>
@@ -318,21 +324,22 @@ export default function Dashboard() {
               >
                 <Menu className="h-5 w-5" />
               </button>
-              <h1 className="ml-4 text-2xl font-bold text-gray-900">Dashboard</h1>
+              <h1 className="ml-4 text-2xl font-bold text-gray-900">{t('dashboard')}</h1>
             </div>
             
             <div className="flex items-center space-x-4">
+              <LanguageSwitcher variant="compact" />
               <div className="flex items-center space-x-2">
                 <User className="h-8 w-8 bg-blue-100 text-blue-600 rounded-full p-1" />
                 <div className="hidden md:block">
-                  <span className="text-gray-700 font-medium">{user?.name || 'Kullanıcı'}</span>
-                  <div className="text-xs text-gray-500">{user?.role === 'admin' ? 'Demo Admin' : 'Kullanıcı'}</div>
+                  <span className="text-gray-700 font-medium">{user?.name || tDashboard('welcome')}</span>
+                  <div className="text-xs text-gray-500">{user?.role === 'admin' ? 'Demo Admin' : t('user')}</div>
                 </div>
               </div>
               <button 
                 onClick={handleLogout}
                 className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-md transition-colors"
-                title="Çıkış Yap"
+                title={t('logout')}
               >
                 <LogOut className="h-5 w-5" />
               </button>
@@ -366,7 +373,7 @@ export default function Dashboard() {
 
             {/* Upload Section */}
             <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-              <h2 className="text-xl font-semibold mb-4">İçerik Analizi</h2>
+              <h2 className="text-xl font-semibold mb-4">{tAnalysis('textAnalysis')}</h2>
               
               {/* Tab Selection */}
               <div className="flex space-x-1 bg-gray-100 rounded-lg p-1 mb-6">
@@ -377,7 +384,7 @@ export default function Dashboard() {
                   }`}
                 >
                   <FileText className="h-4 w-4 mr-2" />
-                  Metin
+                  {tAnalysis('textAnalysis')}
                 </button>
                 <button
                   onClick={() => setActiveTab('image')}
@@ -386,7 +393,7 @@ export default function Dashboard() {
                   }`}
                 >
                   <Image className="h-4 w-4 mr-2" />
-                  Görsel
+                  {tAnalysis('imageAnalysis')}
                 </button>
                 <button
                   onClick={() => setActiveTab('video')}
@@ -404,7 +411,7 @@ export default function Dashboard() {
                 <div className="space-y-4">
                   <textarea
                     className="w-full h-40 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-                    placeholder="Analiz etmek istediğiniz metni buraya yapıştırın..."
+                    placeholder={tDashboard('enterTextPlaceholder')}
                     value={textContent}
                     onChange={(e) => {
                       setTextContent(e.target.value)
@@ -430,9 +437,9 @@ export default function Dashboard() {
                     >
                       <Upload className={`h-12 w-12 mx-auto mb-4 ${dragOver ? 'text-blue-500' : 'text-gray-400'}`} />
                       <p className="text-gray-600 mb-2">
-                        {dragOver ? 'Dosyayı bırakın...' : 'Görsel dosyasını buraya sürükleyin veya tıklayın'}
+                        {dragOver ? tDashboard('dragDropImage') : tDashboard('dragDropImage')}
                       </p>
-                      <p className="text-sm text-gray-500">PNG, JPG, WEBP (maks. 10MB)</p>
+                      <p className="text-sm text-gray-500">{tDashboard('supportedFormats')}</p>
                       <p className="text-xs text-green-600 mt-2">🎯 AI Tool Detection Aktif!</p>
                       <input 
                         id="image-upload"

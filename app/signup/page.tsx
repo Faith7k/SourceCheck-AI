@@ -3,8 +3,11 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { Shield, Eye, EyeOff } from 'lucide-react'
+import { useTranslations } from '@/lib/language-context'
+import { LanguageSwitcher } from '@/components/ui/language-switcher'
 
 export default function Signup() {
+  const { t, tSignup } = useTranslations()
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [formData, setFormData] = useState({
@@ -34,16 +37,19 @@ export default function Signup() {
           <div className="flex justify-center">
             <Link href="/" className="flex items-center">
               <Shield className="h-12 w-12 text-blue-600 mr-3" />
-              <span className="text-3xl font-bold text-gray-900">SourceCheck AI</span>
+              <span className="text-3xl font-bold text-gray-900">{t('title')}</span>
             </Link>
           </div>
+          <div className="flex justify-center mt-4">
+            <LanguageSwitcher variant="compact" />
+          </div>
           <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            Hesap oluşturun
+            {tSignup('createAccount')}
           </h2>
           <p className="mt-2 text-center text-sm text-gray-600">
-            Zaten hesabınız var mı?{' '}
+            {tSignup('alreadyHaveAccount')}{' '}
             <Link href="/login" className="font-medium text-blue-600 hover:text-blue-500">
-              Giriş yapın
+              {tSignup('signIn')}
             </Link>
           </p>
         </div>
@@ -52,7 +58,7 @@ export default function Signup() {
           <form className="space-y-6" onSubmit={handleSubmit}>
             <div>
               <label htmlFor="name" className="block text-sm font-medium text-gray-700">
-                Ad Soyad
+                {tSignup('firstName')} / {tSignup('lastName')}
               </label>
               <div className="mt-1">
                 <input
@@ -63,14 +69,14 @@ export default function Signup() {
                   value={formData.name}
                   onChange={handleChange}
                   className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                  placeholder="Adınız ve soyadınız"
+                  placeholder={`${tSignup('firstName')} ${tSignup('lastName')}`}
                 />
               </div>
             </div>
 
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                E-posta adresi
+                {tSignup('email')}
               </label>
               <div className="mt-1">
                 <input
@@ -82,14 +88,14 @@ export default function Signup() {
                   value={formData.email}
                   onChange={handleChange}
                   className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                  placeholder="ornek@email.com"
+                  placeholder="example@email.com"
                 />
               </div>
             </div>
 
             <div>
               <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                Şifre
+                {tSignup('password')}
               </label>
               <div className="mt-1 relative">
                 <input
@@ -100,7 +106,7 @@ export default function Signup() {
                   value={formData.password}
                   onChange={handleChange}
                   className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm pr-10"
-                  placeholder="En az 8 karakter"
+                  placeholder="Min 8 characters"
                 />
                 <button
                   type="button"
@@ -118,7 +124,7 @@ export default function Signup() {
 
             <div>
               <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
-                Şifre Tekrarı
+                {tSignup('confirmPassword')}
               </label>
               <div className="mt-1 relative">
                 <input
@@ -129,7 +135,7 @@ export default function Signup() {
                   value={formData.confirmPassword}
                   onChange={handleChange}
                   className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm pr-10"
-                  placeholder="Şifrenizi tekrar girin"
+                  placeholder={tSignup('confirmPassword')}
                 />
                 <button
                   type="button"
@@ -155,10 +161,9 @@ export default function Signup() {
                   className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                 />
                 <label htmlFor="terms" className="ml-2 block text-sm text-gray-900">
-                  <Link href="/terms" className="text-blue-600 hover:text-blue-500">Kullanım Şartları</Link>
-                  {' '}ve{' '}
-                  <Link href="/privacy" className="text-blue-600 hover:text-blue-500">Gizlilik Politikası</Link>
-                  'nı kabul ediyorum
+                  {tSignup('agreeToTerms')} <Link href="/terms" className="text-blue-600 hover:text-blue-500">{tSignup('termsOfService')}</Link>
+                  {' '}and{' '}
+                  <Link href="/privacy" className="text-blue-600 hover:text-blue-500">{tSignup('privacyPolicy')}</Link>
                 </label>
               </div>
             </div>
@@ -168,7 +173,7 @@ export default function Signup() {
                 type="submit"
                 className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
               >
-                Hesap Oluştur
+                {tSignup('createAccount')}
               </button>
             </div>
 
