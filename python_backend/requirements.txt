@@ -1,0 +1,7 @@
+torch>=2.0.0
+torchvision>=0.15.0
+clip-by-openai
+pillow>=9.0.0
+numpy>=1.21.0
+requests>=2.25.0
+argparse 

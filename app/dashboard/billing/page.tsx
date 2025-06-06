@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { 
   Shield, 
@@ -19,6 +19,11 @@ import {
 export default function BillingPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [currentPlan] = useState('free') // free, pro, enterprise
+  const [isClient, setIsClient] = useState(false)
+
+  useEffect(() => {
+    setIsClient(true)
+  }, [])
 
   return (
     <div className="h-screen bg-gray-50 flex">
@@ -27,7 +32,7 @@ export default function BillingPage() {
         <div className="p-4">
           <div className="flex items-center">
             <Shield className="h-8 w-8 text-blue-600" />
-            {(sidebarOpen || window.innerWidth >= 768) && (
+            {(sidebarOpen || (isClient && window.innerWidth >= 768)) && (
               <span className="ml-3 text-xl font-bold text-gray-900">SourceCheck AI</span>
             )}
           </div>
@@ -37,19 +42,19 @@ export default function BillingPage() {
           <div className="px-4 space-y-2">
             <Link href="/dashboard" className="flex items-center px-4 py-2 text-gray-600 hover:bg-gray-50 rounded-lg">
               <Search className="h-5 w-5" />
-              {(sidebarOpen || window.innerWidth >= 768) && <span className="ml-3">Analiz Et</span>}
+              {(sidebarOpen || (isClient && window.innerWidth >= 768)) && <span className="ml-3">Analiz Et</span>}
             </Link>
             <Link href="/dashboard/history" className="flex items-center px-4 py-2 text-gray-600 hover:bg-gray-50 rounded-lg">
               <History className="h-5 w-5" />
-              {(sidebarOpen || window.innerWidth >= 768) && <span className="ml-3">Geçmiş</span>}
+              {(sidebarOpen || (isClient && window.innerWidth >= 768)) && <span className="ml-3">Geçmiş</span>}
             </Link>
             <Link href="/dashboard/settings" className="flex items-center px-4 py-2 text-gray-600 hover:bg-gray-50 rounded-lg">
               <Settings className="h-5 w-5" />
-              {(sidebarOpen || window.innerWidth >= 768) && <span className="ml-3">Ayarlar</span>}
+              {(sidebarOpen || (isClient && window.innerWidth >= 768)) && <span className="ml-3">Ayarlar</span>}
             </Link>
             <Link href="/dashboard/billing" className="flex items-center px-4 py-2 text-blue-600 bg-blue-50 rounded-lg">
               <CreditCard className="h-5 w-5" />
-              {(sidebarOpen || window.innerWidth >= 768) && <span className="ml-3">Faturalandırma</span>}
+              {(sidebarOpen || (isClient && window.innerWidth >= 768)) && <span className="ml-3">Faturalandırma</span>}
             </Link>
           </div>
         </nav>

@@ -120,7 +120,22 @@ const translations = {
       saveSettings: "Save Settings",
       resetSettings: "Reset Settings",
       settingsSaved: "Settings saved",
-      settingsError: "Failed to save settings"
+      settingsError: "Failed to save settings",
+      settings: "Settings",
+      language: "Language",
+      profile: "Profile",
+      defaultModel: "Default Model",
+      enterApiKey: "Enter your Mistral API key",
+      testConnection: "Test Connection",
+      connectionSuccessful: "API connection successful",
+      connectionFailed: "API connection failed",
+      profileSettings: "Profile Settings",
+      displayName: "Display Name",
+      emailAddress: "Email Address",
+      accountType: "Account Type",
+      memberSince: "Member Since",
+      updateProfile: "Update Profile",
+      profileUpdated: "Profile updated successfully"
     },
     profile: {
       userProfile: "User Profile",
@@ -141,7 +156,12 @@ const translations = {
       about: "About",
       contact: "Contact",
       help: "Help",
-      dashboard: "Dashboard"
+      dashboard: "Dashboard",
+      login: "Login",
+      signup: "Sign Up",
+      logout: "Logout",
+      billing: "Billing",
+      menu: "Menu"
     },
     dashboard: {
       welcome: "Welcome",
@@ -166,7 +186,30 @@ const translations = {
       feedbackIncorrect: "Result is incorrect",
       feedbackThanks: "Thank you for your feedback!",
       recentAnalyses: "Recent Analyses",
-      noHistory: "You don't have any analysis history yet."
+      noHistory: "You don't have any analysis history yet.",
+      overview: "Overview",
+      textAnalysis: "Text Analysis",
+      imageAnalysis: "Image Analysis",
+      videoAnalysis: "Video Analysis",
+      enterTextHere: "Enter text to analyze here...",
+      analyzeText: "Analyze Text",
+      uploadImage: "Upload Image",
+      analyzeImage: "Analyze Image",
+      wasThisCorrect: "Was this analysis correct?",
+      yes: "Yes",
+      no: "No",
+      aiGenerated: "AI Generated",
+      humanGenerated: "Human Generated",
+      uncertain: "Uncertain",
+      submitFeedback: "Submit Feedback",
+      apiKeyRequired: "API key required. Please set your Mistral API key in settings.",
+      highConfidenceAI: "High confidence - AI generated",
+      mediumConfidenceAI: "Medium confidence - likely AI generated",
+      lowConfidenceAI: "Low confidence - possibly AI generated",
+      highConfidenceHuman: "High confidence - Human generated",
+      mediumConfidenceHuman: "Medium confidence - likely Human generated",
+      lowConfidenceHuman: "Low confidence - possibly Human generated",
+      uncertainResult: "Uncertain - requires further analysis"
     },
     errors: {
       networkError: "Network connection error",
@@ -204,95 +247,10 @@ const translations = {
       email: "Email",
       password: "Password",
       confirmPassword: "Confirm Password",
-      createAccount: "Create Account",
       creating: "Creating account...",
       agreeToTerms: "I agree to the Terms of Service and Privacy Policy",
       termsOfService: "Terms of Service",
       privacyPolicy: "Privacy Policy"
-    },
-    dashboard: {
-      welcome: "Welcome",
-      overview: "Overview",
-      textAnalysis: "Text Analysis",
-      imageAnalysis: "Image Analysis",
-      videoAnalysis: "Video Analysis",
-      enterTextHere: "Enter text to analyze here...",
-      analyzeText: "Analyze Text",
-      uploadImage: "Upload Image",
-      dragDropImage: "Drag and drop an image here, or click to select",
-      supportedFormats: "Supported formats: JPG, PNG, WEBP (max 10MB)",
-      analyzeImage: "Analyze Image",
-      pleaseEnterText: "Please enter some text to analyze",
-      pleaseUploadImage: "Please upload an image to analyze",
-      unsupportedFormat: "Unsupported file format. Please use JPG, PNG, or WEBP",
-      fileTooLarge: "File is too large. Maximum size is 10MB",
-      wasThisCorrect: "Was this analysis correct?",
-      yes: "Yes",
-      no: "No",
-      provideFeedback: "Please provide the correct classification:",
-      aiGenerated: "AI Generated",
-      humanGenerated: "Human Generated",
-      uncertain: "Uncertain",
-      submitFeedback: "Submit Feedback",
-      thankYouFeedback: "Thank you for your feedback!",
-      apiKeyRequired: "API key required. Please set your Mistral API key in settings.",
-      
-      highConfidenceAI: "High confidence - AI generated",
-      mediumConfidenceAI: "Medium confidence - likely AI generated",
-      lowConfidenceAI: "Low confidence - possibly AI generated",
-      highConfidenceHuman: "High confidence - Human generated",
-      mediumConfidenceHuman: "Medium confidence - likely Human generated",
-      lowConfidenceHuman: "Low confidence - possibly Human generated",
-      uncertainResult: "Uncertain - requires further analysis"
-    },
-    settings: {
-      settings: "Settings",
-      language: "Language",
-      apiSettings: "API Settings",
-      profile: "Profile",
-      mistralApiKey: "Mistral AI API Key",
-      defaultModel: "Default Model",
-      enterApiKey: "Enter your Mistral API key",
-      saveSettings: "Save Settings",
-      settingsSaved: "Settings saved successfully",
-      testConnection: "Test Connection",
-      connectionSuccessful: "API connection successful",
-      connectionFailed: "API connection failed",
-      profileSettings: "Profile Settings",
-      displayName: "Display Name",
-      emailAddress: "Email Address",
-      accountType: "Account Type",
-      memberSince: "Member Since",
-      updateProfile: "Update Profile",
-      profileUpdated: "Profile updated successfully"
-    },
-    navigation: {
-      home: "Home",
-      dashboard: "Dashboard",
-      settings: "Settings",
-      login: "Login",
-      signup: "Sign Up",
-      logout: "Logout",
-      history: "History",
-      billing: "Billing",
-      profile: "Profile",
-      menu: "Menu"
-    },
-    analysis: {
-      textAnalysis: "Text Analysis",
-      imageAnalysis: "Image Analysis",
-      videoAnalysis: "Video Analysis",
-      confidence: "Confidence",
-      aiDetection: "AI Detection",
-      sources: "Sources",
-      originalAuthor: "Original Author",
-      similarity: "Similarity",
-      explanation: "Explanation",
-      model: "Model",
-      timestamp: "Timestamp",
-      processing: "Processing",
-      completed: "Completed",
-      failed: "Failed"
     },
     features: {
       whySourceCheck: "Why SourceCheck AI?",
@@ -373,7 +331,15 @@ const translations = {
       explanation: "Analiz Açıklaması",
       aiGenerated: "AI Üretimi",
       humanGenerated: "İnsan Üretimi",
-      uncertain: "Belirsiz"
+      uncertain: "Belirsiz",
+      aiDetection: "AI Tespiti",
+      originalAuthor: "Orijinal Yazar",
+      similarity: "Benzerlik",
+      model: "Model",
+      timestamp: "Zaman Damgası",
+      processing: "İşleniyor",
+      completed: "Tamamlandı",
+      failed: "Başarısız"
     },
     settings: {
       languageSettings: "Dil Ayarları",
@@ -387,7 +353,22 @@ const translations = {
       saveSettings: "Ayarları Kaydet",
       resetSettings: "Ayarları Sıfırla",
       settingsSaved: "Ayarlar kaydedildi",
-      settingsError: "Ayarlar kaydedilemedi"
+      settingsError: "Ayarlar kaydedilemedi",
+      settings: "Ayarlar",
+      language: "Dil",
+      profile: "Profil",
+      defaultModel: "Varsayılan Model",
+      enterApiKey: "Mistral API anahtarınızı girin",
+      testConnection: "Bağlantıyı Test Et",
+      connectionSuccessful: "API bağlantısı başarılı",
+      connectionFailed: "API bağlantısı başarısız",
+      profileSettings: "Profil Ayarları",
+      displayName: "Görünen Ad",
+      emailAddress: "E-posta Adresi",
+      accountType: "Hesap Türü",
+      memberSince: "Üyelik Tarihi",
+      updateProfile: "Profili Güncelle",
+      profileUpdated: "Profil başarıyla güncellendi"
     },
     profile: {
       userProfile: "Kullanıcı Profili",
@@ -407,7 +388,12 @@ const translations = {
       profile: "Profil",
       about: "Hakkında", 
       contact: "İletişim",
-      dashboard: "Gösterge Paneli"
+      dashboard: "Gösterge Paneli",
+      login: "Giriş",
+      signup: "Üye Ol",
+      logout: "Çıkış",
+      billing: "Faturalama",
+      menu: "Menü"
     },
     dashboard: {
       welcome: "Hoş Geldiniz",
@@ -435,7 +421,6 @@ const translations = {
       submitFeedback: "Geri Bildirim Gönder",
       thankYouFeedback: "Geri bildiriminiz için teşekkürler!",
       apiKeyRequired: "API anahtarı gerekli. Lütfen ayarlarda Mistral API anahtarınızı belirleyin.",
-      
       highConfidenceAI: "Yüksek güven - AI üretimi",
       mediumConfidenceAI: "Orta güven - muhtemelen AI üretimi",
       lowConfidenceAI: "Düşük güven - olasılıkla AI üretimi",
@@ -480,60 +465,10 @@ const translations = {
       email: "E-posta",
       password: "Şifre",
       confirmPassword: "Şifre Tekrarı",
-      createAccount: "Hesap Oluştur",
       creating: "Hesap oluşturuluyor...",
       agreeToTerms: "Hizmet Şartları ve Gizlilik Politikası'nı kabul ediyorum",
       termsOfService: "Hizmet Şartları",
       privacyPolicy: "Gizlilik Politikası"
-    },
-    settings: {
-      settings: "Ayarlar",
-      language: "Dil",
-      apiSettings: "API Ayarları",
-      profile: "Profil",
-      mistralApiKey: "Mistral AI API Anahtarı",
-      defaultModel: "Varsayılan Model",
-      enterApiKey: "Mistral API anahtarınızı girin",
-      saveSettings: "Ayarları Kaydet",
-      settingsSaved: "Ayarlar başarıyla kaydedildi",
-      testConnection: "Bağlantıyı Test Et",
-      connectionSuccessful: "API bağlantısı başarılı",
-      connectionFailed: "API bağlantısı başarısız",
-      profileSettings: "Profil Ayarları",
-      displayName: "Görünen Ad",
-      emailAddress: "E-posta Adresi",
-      accountType: "Hesap Türü",
-      memberSince: "Üyelik Tarihi",
-      updateProfile: "Profili Güncelle",
-      profileUpdated: "Profil başarıyla güncellendi"
-    },
-    navigation: {
-      home: "Ana Sayfa",
-      dashboard: "Dashboard",
-      settings: "Ayarlar",
-      login: "Giriş",
-      signup: "Üye Ol",
-      logout: "Çıkış",
-      history: "Geçmiş",
-      billing: "Faturalama",
-      profile: "Profil",
-      menu: "Menü"
-    },
-    analysis: {
-      textAnalysis: "Metin Analizi",
-      imageAnalysis: "Görsel Analizi",
-      videoAnalysis: "Video Analizi",
-      confidence: "Güven",
-      aiDetection: "AI Tespiti",
-      sources: "Kaynaklar",
-      originalAuthor: "Orijinal Yazar",
-      similarity: "Benzerlik",
-      explanation: "Açıklama",
-      model: "Model",
-      timestamp: "Zaman Damgası",
-      processing: "İşleniyor",
-      completed: "Tamamlandı",
-      failed: "Başarısız"
     },
     features: {
       whySourceCheck: "Neden SourceCheck AI?",
@@ -627,7 +562,15 @@ const translations = {
       explanation: "Analyse-Erklärung",
       aiGenerated: "KI-generiert",
       humanGenerated: "Von Menschen erstellt",
-      uncertain: "Ungewiss"
+      uncertain: "Ungewiss",
+      aiDetection: "KI-Erkennung",
+      originalAuthor: "Originalautor",
+      similarity: "Ähnlichkeit",
+      model: "Modell",
+      timestamp: "Zeitstempel",
+      processing: "Verarbeitung",
+      completed: "Abgeschlossen",
+      failed: "Fehlgeschlagen"
     },
     settings: {
       languageSettings: "Spracheinstellungen",
@@ -641,7 +584,22 @@ const translations = {
       saveSettings: "Einstellungen speichern",
       resetSettings: "Einstellungen zurücksetzen",
       settingsSaved: "Einstellungen gespeichert",
-      settingsError: "Einstellungen konnten nicht gespeichert werden"
+      settingsError: "Einstellungen konnten nicht gespeichert werden",
+      settings: "Einstellungen",
+      language: "Sprache",
+      profile: "Profil",
+      defaultModel: "Standardmodell",
+      enterApiKey: "Geben Sie Ihren Mistral API-Schlüssel ein",
+      testConnection: "Verbindung testen",
+      connectionSuccessful: "API-Verbindung erfolgreich",
+      connectionFailed: "API-Verbindung fehlgeschlagen",
+      profileSettings: "Profil-Einstellungen",
+      displayName: "Anzeigename",
+      emailAddress: "E-Mail-Adresse",
+      accountType: "Kontotyp",
+      memberSince: "Mitglied seit",
+      updateProfile: "Profil aktualisieren",
+      profileUpdated: "Profil erfolgreich aktualisiert"
     },
     profile: {
       userProfile: "Benutzerprofil",
@@ -662,7 +620,12 @@ const translations = {
       about: "Über",
       contact: "Kontakt",
       help: "Hilfe",
-      dashboard: "Dashboard"
+      dashboard: "Dashboard",
+      login: "Anmelden",
+      signup: "Registrieren",
+      logout: "Abmelden",
+      billing: "Abrechnung",
+      menu: "Menü"
     },
     dashboard: {
       welcome: "Willkommen",
@@ -725,60 +688,10 @@ const translations = {
       email: "E-Mail",
       password: "Passwort",
       confirmPassword: "Passwort bestätigen",
-      createAccount: "Konto erstellen",
       creating: "Konto wird erstellt...",
       agreeToTerms: "Ich stimme den Nutzungsbedingungen und der Datenschutzerklärung zu",
       termsOfService: "Nutzungsbedingungen",
       privacyPolicy: "Datenschutzerklärung"
-    },
-    settings: {
-      settings: "Einstellungen",
-      language: "Sprache",
-      apiSettings: "API-Einstellungen",
-      profile: "Profil",
-      mistralApiKey: "Mistral AI API-Schlüssel",
-      defaultModel: "Standardmodell",
-      enterApiKey: "Geben Sie Ihren Mistral API-Schlüssel ein",
-      saveSettings: "Einstellungen speichern",
-      settingsSaved: "Einstellungen erfolgreich gespeichert",
-      testConnection: "Verbindung testen",
-      connectionSuccessful: "API-Verbindung erfolgreich",
-      connectionFailed: "API-Verbindung fehlgeschlagen",
-      profileSettings: "Profil-Einstellungen",
-      displayName: "Anzeigename",
-      emailAddress: "E-Mail-Adresse",
-      accountType: "Kontotyp",
-      memberSince: "Mitglied seit",
-      updateProfile: "Profil aktualisieren",
-      profileUpdated: "Profil erfolgreich aktualisiert"
-    },
-    navigation: {
-      home: "Startseite",
-      dashboard: "Dashboard",
-      settings: "Einstellungen",
-      login: "Anmelden",
-      signup: "Registrieren",
-      logout: "Abmelden",
-      history: "Verlauf",
-      billing: "Abrechnung",
-      profile: "Profil",
-      menu: "Menü"
-    },
-    analysis: {
-      textAnalysis: "Textanalyse",
-      imageAnalysis: "Bildanalyse",
-      videoAnalysis: "Videoanalyse",
-      confidence: "Vertrauen",
-      aiDetection: "KI-Erkennung",
-      sources: "Quellen",
-      originalAuthor: "Originalautor",
-      similarity: "Ähnlichkeit",
-      explanation: "Erklärung",
-      model: "Modell",
-      timestamp: "Zeitstempel",
-      processing: "Verarbeitung",
-      completed: "Abgeschlossen",
-      failed: "Fehlgeschlagen"
     },
     features: {
       whySourceCheck: "Warum SourceCheck AI?",
@@ -834,6 +747,7 @@ interface LanguageContextType {
   tFeatures: (key: string) => string
   tPricing: (key: string) => string
   tFooter: (key: string) => string
+  tProfile: (key: string) => string
   availableLanguages: { code: Language; name: string; nativeName: string }[]
 }
 
@@ -947,6 +861,15 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  const tProfile = (key: string): string => {
+    try {
+      const profileTranslations = translations[currentLanguage]?.profile as any
+      return profileTranslations?.[key] || key
+    } catch {
+      return key
+    }
+  }
+
   // Load saved language on mount
   React.useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -972,6 +895,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
       tFeatures,
       tPricing,
       tFooter,
+      tProfile,
       availableLanguages
     }}>
       {children}

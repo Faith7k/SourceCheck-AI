@@ -706,8 +706,11 @@ async function analyzeImage(imageFile: File, settings: any) {
     // 3. AI TOOL DETECTION
     const toolDetection = await detectAITool(buffer, fileInfo, metadataAnalysis)
     
-    // Combine analysis results
-    const finalResult = combineImageAnalysis(metadataAnalysis, visualAnalysis, toolDetection, fileInfo)
+    // 4. CLIP AI DETECTION (Advanced)
+    const clipAnalysis = await runCLIPAnalysis(buffer, 'image')
+    
+    // Combine analysis results with CLIP
+    const finalResult = combineImageAnalysis(metadataAnalysis, visualAnalysis, toolDetection, fileInfo, clipAnalysis)
     
     return NextResponse.json({
       success: true,
@@ -761,213 +764,9 @@ async function analyzeImageMetadata(buffer: Buffer, fileInfo: any) {
       console.log(`✅ AI System detected: ${aiSystemDetection.system} (${aiSystemDetection.confidence}% confidence)`)
     }
     
-         // ENHANCED AI PLATFORM DETECTION - 7 Major Platforms
-     const aiPlatforms = [
-       // 1. LEONARDO.AI - Highest Priority
-       { 
-         name: 'Leonardo.AI',
-         confidence: 95,
-         signatures: [
-           'leonardo.ai', 'app.leonardo.ai', 'leonardo ai', 'leonardo', 'leonardoai',
-           'cdn.leonardo.ai', 'generations.leonardo.ai'
-         ],
-         metadataFields: ['creator', 'creatortool', 'software', 'source', 'description'],
-         urlPatterns: [/leonardo\.ai/i, /app\.leonardo\.ai/i],
-         filePatterns: {
-           jpeg: { sizeRange: [300000, 600000], aspectRatios: ['1:1', '16:9', '9:16'] },
-           png: { sizeRange: [400000, 800000] }
-         },
-         specificChecks: ['leonardo url', 'leonardo watermark', 'leonardo metadata']
-       },
-       
-       // 2. MIDJOURNEY - Discord Based
-       { 
-         name: 'MidJourney',
-         confidence: 90,
-         signatures: [
-           'midjourney', 'mj', 'discord', 'cdn.discordapp.com',
-           'midjourney.com', 'mid journey'
-         ],
-         metadataFields: ['software', 'source', 'description'],
-         urlPatterns: [/midjourney/i, /discord/i],
-         filePatterns: {
-           jpeg: { sizeRange: [200000, 500000], perfectSquare: true },
-           png: { sizeRange: [300000, 700000] }
-         },
-         specificChecks: ['discord cdn', 'no exif camera', 'perfect composition']
-       },
-       
-       // 3. DALL-E (OpenAI)
-       { 
-         name: 'DALL-E (OpenAI)',
-         confidence: 92,
-         signatures: [
-           'dall-e', 'dalle', 'openai', 'chatgpt', 'gpt-4',
-           'oaidalleapiprodscus.blob.core.windows.net'
-         ],
-         metadataFields: ['software', 'creatortool', 'softwareagent', 'description'],
-         urlPatterns: [/openai/i, /dall-?e/i],
-         filePatterns: {
-           jpeg: { sizeRange: [150000, 400000], squareFormats: ['1024x1024', '512x512'] },
-           png: { sizeRange: [200000, 500000] }
-         },
-         specificChecks: ['openai signature', 'dalle watermark', 'azure blob storage']
-       },
-       
-       // 4. STABLE DIFFUSION
-       { 
-         name: 'Stable Diffusion',
-         confidence: 94,
-         signatures: [
-           'stable-diffusion', 'stablediffusion', 'automatic1111', 'invokeai', 'webui',
-           'a1111', 'comfyui', 'sd', 'huggingface'
-         ],
-         metadataFields: ['prompt', 'parameters', 'software', 'description', 'workflow'],
-         urlPatterns: [/stable-?diffusion/i, /automatic1111/i, /huggingface/i],
-         filePatterns: {
-           png: { sizeRange: [400000, 1000000], hasPrompt: true },
-           jpeg: { sizeRange: [200000, 600000] }
-         },
-         specificChecks: ['prompt parameters', 'sd metadata', 'workflow json']
-       },
-       
-       // 5. ADOBE FIREFLY
-       { 
-         name: 'Adobe Firefly',
-         confidence: 88,
-         signatures: [
-           'adobe firefly', 'firefly', 'adobe', 'firefly.adobe.com',
-           'adobe.com', 'photoshop firefly'
-         ],
-         metadataFields: ['software', 'creator', 'copyrightnotice', 'source'],
-         urlPatterns: [/firefly\.adobe/i, /adobe.*firefly/i],
-         filePatterns: {
-           jpeg: { sizeRange: [300000, 700000], adobeWatermark: true },
-           png: { sizeRange: [400000, 800000] }
-         },
-         specificChecks: ['adobe watermark', 'firefly signature', 'adobe creative cloud']
-       },
-       
-       // 6. CANVA AI
-       { 
-         name: 'Canva AI',
-         confidence: 85,
-         signatures: [
-           'canva', 'canva ai', 'canva.com', 'magic studio',
-           'text to image', 'canva magic'
-         ],
-         metadataFields: ['software', 'creator', 'source', 'description'],
-         urlPatterns: [/canva/i, /magic.?studio/i],
-         filePatterns: {
-           jpeg: { sizeRange: [150000, 400000], canvaTemplates: true },
-           png: { sizeRange: [200000, 500000] }
-         },
-         specificChecks: ['canva watermark', 'magic studio', 'canva elements']
-       },
-       
-       // 7. GROK AI (xAI)
-       { 
-         name: 'Grok AI (xAI)',
-         confidence: 87,
-         signatures: [
-           'grok', 'xai', 'x.ai', 'flux', 'grok ai',
-           'elon', 'twitter ai', 'x.com'
-         ],
-         metadataFields: ['software', 'description', 'creator', 'source'],
-         urlPatterns: [/grok/i, /x\.ai/i, /flux/i],
-         filePatterns: {
-           jpeg: { sizeRange: [80000, 250000], twitterFormat: true },
-           png: { sizeRange: [100000, 300000] }
-         },
-         specificChecks: ['grok signature', 'flux model', 'x.ai metadata']
-       }
-     ]
+    // Remove old aggressive platform detection - use only the new conservative detection above
     
-         // ADVANCED AI PLATFORM DETECTION with Enhanced Scoring
-     for (const platform of aiPlatforms) {
-       let matchScore = 0
-       let detectionEvidence: string[] = []
-       
-       console.log(`🔍 Checking platform: ${platform.name}`)
-       
-       // 1. Signature Detection in Raw Content
-       for (const sig of platform.signatures) {
-         if (hex.toLowerCase().includes(sig.toLowerCase()) || textContent.toLowerCase().includes(sig.toLowerCase())) {
-           matchScore += 25
-           detectionEvidence.push(`Signature: ${sig}`)
-           console.log(`🎯 Found signature "${sig}" for ${platform.name}`)
-         }
-       }
-       
-       // 2. URL Pattern Detection
-       if (platform.urlPatterns) {
-         for (const pattern of platform.urlPatterns) {
-           if (pattern.test(textContent) || pattern.test(hex)) {
-             matchScore += 40
-             detectionEvidence.push(`URL pattern matched`)
-             console.log(`🔗 URL pattern match for ${platform.name}`)
-           }
-         }
-       }
-       
-       // 3. Metadata Field Analysis
-       if (platform.metadataFields) {
-         for (const field of platform.metadataFields) {
-           const fieldValue = getMetadataFieldValue(analysis.metadataFields, field)
-           if (fieldValue) {
-             // Check if field value contains platform signatures
-             for (const sig of platform.signatures) {
-               if (fieldValue.toLowerCase().includes(sig.toLowerCase())) {
-                 matchScore += 35
-                 detectionEvidence.push(`Metadata ${field}: ${sig}`)
-                 console.log(`📊 Metadata field "${field}" contains "${sig}" for ${platform.name}`)
-               }
-             }
-           }
-         }
-       }
-       
-       // 4. File Pattern Analysis
-       if (platform.filePatterns && fileInfo) {
-         const fileType = fileInfo.type.includes('jpeg') ? 'jpeg' : 'png'
-         const patterns = platform.filePatterns[fileType]
-         
-         if (patterns) {
-           // Size range check
-           if (patterns.sizeRange && fileInfo.size >= patterns.sizeRange[0] && fileInfo.size <= patterns.sizeRange[1]) {
-             matchScore += 15
-             detectionEvidence.push(`File size pattern match`)
-             console.log(`📁 File size matches ${platform.name} pattern: ${fileInfo.size} bytes`)
-           }
-         }
-       }
-       
-       // 5. Platform-Specific Checks
-       if (platform.specificChecks) {
-         for (const check of platform.specificChecks) {
-           if (textContent.includes(check.toLowerCase()) || hex.includes(check.toLowerCase())) {
-             matchScore += 20
-             detectionEvidence.push(`Specific check: ${check}`)
-             console.log(`✅ Specific check "${check}" passed for ${platform.name}`)
-           }
-         }
-       }
-       
-       // Apply platform confidence multiplier
-       const finalScore = matchScore * (platform.confidence / 100)
-       
-       console.log(`📊 ${platform.name} final score: ${finalScore} (raw: ${matchScore}, confidence: ${platform.confidence}%)`)
-       
-       if (finalScore >= 20) {
-         analysis.aiSignatures.push(platform.name)
-         analysis.confidence += Math.min(40, finalScore)
-         
-         if (!analysis.detectedSystem || finalScore > 50) {
-           analysis.detectedSystem = platform.name
-           console.log(`🎯 NEW TOP DETECTION: ${platform.name} with score ${finalScore}`)
-         }
-       }
-     }
+    // Old platform detection removed - use only conservative metadata detection above
     
     // Enhanced metadata checks
     await performEnhancedMetadataChecks(buffer, fileInfo, analysis)
@@ -1047,55 +846,63 @@ function detectAISystemFromMetadata(metadataFields: any, textContent: string, he
   
   console.log('🔍 Combined metadata text (first 200 chars):', allMetadataText.substring(0, 200))
   
-  // AI System Detection Rules (Priority Order)
+  // AI System Detection Rules (Priority Order) - Much more specific patterns
   const detectionRules = [
     {
       system: 'Leonardo.AI',
       confidence: 95,
-      patterns: ['leonardo.ai', 'app.leonardo.ai', 'leonardo ai', 'leonardo', 'leonardoai'],
-      fields: ['creator', 'creatortool', 'software', 'source']
+      patterns: ['leonardo.ai', 'app.leonardo.ai', 'leonardo ai', 'leonardoai.com'],
+      fields: ['creator', 'creatortool', 'software', 'source'],
+      minLength: 8  // Minimum pattern length to avoid false positives
     },
     {
       system: 'Stable Diffusion',
       confidence: 95,
-      patterns: ['stable-diffusion', 'stablediffusion', 'automatic1111', 'invokeai', 'webui'],
-      fields: ['prompt', 'parameters', 'software']
+      patterns: ['stable-diffusion', 'stablediffusion', 'automatic1111', 'invokeai', 'webui', 'stable diffusion'],
+      fields: ['prompt', 'parameters', 'software'],
+      minLength: 8
     },
     {
       system: 'DALL-E (OpenAI)',
-      confidence: 90,
-      patterns: ['openai', 'dall-e', 'dalle'],
-      fields: ['software', 'creatortool', 'softwareagent']
+      confidence: 92,
+      patterns: ['openai.com', 'dall-e', 'dalle', 'openai api', 'dall·e'],
+      fields: ['software', 'creatortool', 'softwareagent'],
+      minLength: 6
     },
     {
       system: 'Adobe Firefly',
       confidence: 88,
-      patterns: ['adobe firefly', 'firefly'],
-      fields: ['software', 'creator']
+      patterns: ['adobe firefly', 'firefly.adobe.com', 'adobe.com/firefly'],
+      fields: ['software', 'creator'],
+      minLength: 8
     },
     {
       system: 'MidJourney',
-      confidence: 85,
-      patterns: ['midjourney', 'mj'],
-      fields: ['software', 'creator', 'source']
+      confidence: 90,
+      patterns: ['midjourney', 'discord.gg/midjourney', 'midjourney.com', '/imagine'],
+      fields: ['software', 'creator', 'source'],
+      minLength: 8  // Remove short 'mj' pattern
     },
     {
       system: 'Canva AI',
-      confidence: 82,
-      patterns: ['canva'],
-      fields: ['software', 'creator', 'source']
+      confidence: 85,
+      patterns: ['canva.com', 'canva ai', 'canva magic'],
+      fields: ['software', 'creator', 'source'],
+      minLength: 8
     },
     {
       system: 'Fotor AI',
       confidence: 80,
-      patterns: ['fotor'],
-      fields: ['software', 'creator']
+      patterns: ['fotor.com', 'fotor ai'],
+      fields: ['software', 'creator'],
+      minLength: 8
     }
   ]
   
   for (const rule of detectionRules) {
     for (const pattern of rule.patterns) {
-      if (allMetadataText.includes(pattern)) {
+      // Only check patterns that meet minimum length requirement
+      if (pattern.length >= (rule.minLength || 6) && allMetadataText.includes(pattern)) {
         detection.system = rule.system
         detection.confidence = rule.confidence
         detection.evidence.push(`Found "${pattern}" in metadata`)
@@ -1144,45 +951,21 @@ function getMetadataFieldValue(metadataFields: any, fieldName: string): string {
 
 // Enhanced metadata checks
 async function performEnhancedMetadataChecks(buffer: Buffer, fileInfo: any, analysis: any) {
-  // Check for lack of natural camera metadata in JPEG files
-  if (fileInfo.type.includes('jpg') || fileInfo.type.includes('jpeg')) {
-    const hasCameraData = analysis.metadataFields.exif?.Make || 
-                         analysis.metadataFields.exif?.Model || 
-                         analysis.metadataFields.exif?.CameraModelName
-    
-    if (!hasCameraData) {
-      analysis.suspiciousMetadata.push('JPEG missing camera metadata (AI generation indicator)')
-      analysis.confidence += 15
-    }
-    
-    // Check for missing GPS data
-    const hasGPS = analysis.metadataFields.exif?.GPS || 
-                   analysis.metadataFields.exif?.GPSLatitude
-    
-    if (!hasGPS) {
-      analysis.suspiciousMetadata.push('Missing GPS metadata (common in AI images)')
-      analysis.confidence += 8
-    }
-  }
+  // MUCH MORE CONSERVATIVE metadata checks - normal photos often lack camera data
   
-  // Check for AI-specific metadata patterns
+  // Check for AI-specific metadata patterns - only very specific ones
   const allMetadata = JSON.stringify(analysis.metadataFields).toLowerCase()
   
-  if (allMetadata.includes('generated') || allMetadata.includes('artificial') || 
-      allMetadata.includes('synthetic') || allMetadata.includes('created')) {
-    analysis.suspiciousMetadata.push('AI generation keywords found in metadata')
-    analysis.confidence += 25
+  // Only check for very specific AI generation keywords
+  if (allMetadata.includes('ai generated') || allMetadata.includes('artificial intelligence') || 
+      allMetadata.includes('stable diffusion') || allMetadata.includes('dall-e')) {
+    analysis.suspiciousMetadata.push('Specific AI generation keywords found')
+    analysis.confidence += 15 // Lower confidence boost
   }
   
-  // Check for missing timestamp data
-  const hasTimestamp = analysis.metadataFields.exif?.DateTime || 
-                      analysis.metadataFields.exif?.DateTimeOriginal ||
-                      analysis.metadataFields.iptc?.DateCreated
-  
-  if (!hasTimestamp && (fileInfo.type.includes('jpg') || fileInfo.type.includes('jpeg'))) {
-    analysis.suspiciousMetadata.push('Missing timestamp metadata')
-    analysis.confidence += 10
-  }
+     // Don't penalize missing camera data - many legitimate photos lack this
+   // Don't penalize missing GPS - privacy setting removes this
+   // Don't penalize missing timestamps - common in processed images
 }
 
 // Parse EXIF data
@@ -1206,22 +989,22 @@ async function parseEXIFData(buffer: Buffer) {
       console.log('✅ Leonardo.AI signature found in buffer!')
     }
     
-    // Look for other AI signatures in buffer
-    if (fullText.includes('midjourney') || fullAscii.includes('midjourney')) {
+    // Look for SPECIFIC AI signatures in buffer - only very clear ones
+    if (fullText.includes('midjourney.com') || fullText.includes('discord.gg/midjourney')) {
       exifData.Software = 'MidJourney'
-      console.log('✅ MidJourney signature found in buffer!')
+      console.log('✅ MidJourney verified signature found in buffer!')
     }
     
-    if (fullText.includes('dall-e') || fullText.includes('openai') || 
-        fullAscii.includes('dall-e') || fullAscii.includes('openai')) {
+    if (fullText.includes('openai.com') || fullText.includes('dall-e') || 
+        fullText.includes('dall·e')) {
       exifData.Software = 'DALL-E (OpenAI)'
-      console.log('✅ DALL-E signature found in buffer!')
+      console.log('✅ DALL-E verified signature found in buffer!')
     }
     
     if (fullText.includes('stable-diffusion') || fullText.includes('automatic1111') ||
-        fullAscii.includes('stable-diffusion') || fullAscii.includes('automatic1111')) {
+        fullText.includes('invokeai')) {
       exifData.Software = 'Stable Diffusion'
-      console.log('✅ Stable Diffusion signature found in buffer!')
+      console.log('✅ Stable Diffusion verified signature found in buffer!')
     }
     
     // Look for EXIF marker in JPEG
@@ -1752,35 +1535,8 @@ async function detectAITool(buffer: Buffer, fileInfo: any, metadataAnalysis: any
   try {
     // PRIORITY 1: Exact file size fingerprinting (most reliable, filename independent)
     
-    // Grok AI (xAI) exact size matches
-    if (fileInfo.size === 98416 && fileInfo.type === 'image/jpeg') {
-      detection.detectedTool = 'Grok AI (xAI)'
-      detection.confidence = 95
-      detection.indicators.push('Grok AI exact file size match (98,416 bytes)')
-    }
-    
-    // ChatGPT DALL-E 3 exact size matches
-    else if (fileInfo.size === 2155563 && fileInfo.type === 'image/png') {
-      detection.detectedTool = 'ChatGPT DALL-E 3'
-      detection.confidence = 95
-      detection.indicators.push('ChatGPT DALL-E 3 exact file size match (2,155,563 bytes)')
-    }
-    
-    // PRIORITY 2: Format + Size range patterns (filename independent)
-    
-    // Grok AI patterns - JPEG format, specific size ranges
-    else if (fileInfo.type === 'image/jpeg' && fileInfo.size >= 80000 && fileInfo.size <= 120000) {
-      detection.detectedTool = 'Grok AI (xAI)'
-      detection.confidence = 85
-      detection.indicators.push('Grok AI size pattern (80-120KB JPEG)')
-    }
-    
-    // ChatGPT patterns - PNG format, large sizes
-    else if (fileInfo.type === 'image/png' && fileInfo.size >= 2000000 && fileInfo.size <= 3000000) {
-      detection.detectedTool = 'ChatGPT/OpenAI'
-      detection.confidence = 80
-      detection.indicators.push('ChatGPT size pattern (2-3MB PNG)')
-    }
+    // ONLY DETECT WITH VERY SPECIFIC METADATA SIGNATURES - NO FILE SIZE GUESSING
+    // Remove all file size based detection to avoid false positives
     
     // PRIORITY 3: Binary pattern analysis (filename independent)
     const binaryAnalysis = await analyzeBinaryPatterns(buffer, fileInfo)
@@ -1790,58 +1546,27 @@ async function detectAITool(buffer: Buffer, fileInfo: any, metadataAnalysis: any
       detection.indicators.push(...binaryAnalysis.indicators)
     }
     
-    // PRIORITY 4: Metadata signatures (filename independent)
-    if (metadataAnalysis.aiSignatures.length > 0) {
-      detection.detectedTool = detection.detectedTool || metadataAnalysis.aiSignatures[0]
-      detection.confidence = Math.max(detection.confidence, 85)
-      detection.indicators.push(`Metadata'da ${metadataAnalysis.aiSignatures[0]} imzası bulundu`)
+    // PRIORITY 4: Only very reliable metadata signatures (filename independent)
+    if (metadataAnalysis.detectedSystem && metadataAnalysis.confidence > 85) {
+      detection.detectedTool = metadataAnalysis.detectedSystem
+      detection.confidence = Math.max(detection.confidence, 75)
+      detection.indicators.push(`Verified ${metadataAnalysis.detectedSystem} metadata signature`)
     }
     
-    // PRIORITY 5: Enhanced metadata pattern detection
-    if (metadataAnalysis.suspiciousMetadata.length >= 2) {
-      detection.detectedTool = detection.detectedTool || 'AI Generated (Unknown Tool)'
-      detection.confidence = Math.max(detection.confidence, 65)
-      detection.indicators.push('Multiple AI metadata patterns detected')
+    // PRIORITY 5: Very conservative additional checks
+    if (metadataAnalysis.suspiciousMetadata.length >= 3) {
+      detection.confidence = Math.max(detection.confidence, 40) // Much lower confidence
+      detection.indicators.push('Some AI-like metadata patterns detected')
     }
     
-    // PRIORITY 6: Additional format-specific patterns (filename independent)
-    
-    // Additional Grok AI indicators (JPEG format analysis)
-    if (fileInfo.type === 'image/jpeg') {
-      const sizeKB = fileInfo.size / 1024
-      // Grok tends to produce JPEG files in specific size ranges
-      if ((sizeKB >= 90 && sizeKB <= 110) || (sizeKB >= 140 && sizeKB <= 160)) {
-        detection.detectedTool = detection.detectedTool || 'Grok AI (xAI)'
-        detection.confidence = Math.max(detection.confidence, 70)
-        detection.indicators.push(`Grok AI typical JPEG size range (${sizeKB.toFixed(1)}KB)`)
-      }
-    }
-    
-    // Additional ChatGPT/OpenAI indicators (PNG format analysis)  
-    if (fileInfo.type === 'image/png') {
-      const sizeMB = fileInfo.size / (1024 * 1024)
-      // ChatGPT tends to produce PNG files in specific size ranges
-      if (sizeMB >= 1.8 && sizeMB <= 3.2) {
-        detection.detectedTool = detection.detectedTool || 'ChatGPT/OpenAI'
-        detection.confidence = Math.max(detection.confidence, 65)
-        detection.indicators.push(`ChatGPT typical PNG size range (${sizeMB.toFixed(2)}MB)`)
-      }
-    }
-    
-    // PRIORITY 7: Fallback filename analysis (only if no other detection)
-    if (!detection.detectedTool || detection.confidence < 60) {
+    // PRIORITY 6: Conservative filename analysis (only as weak hint)
+    if (!detection.detectedTool || detection.confidence < 30) {
       const fileName = fileInfo.name.toLowerCase()
       
-      // Only use filename as hint, not primary detection
-      if (/(grok|flux|xai)/i.test(fileName)) {
-        detection.indicators.push('Filename suggests Grok AI origin')
-        detection.confidence += 10
-      } else if (/(dalle|openai|chatgpt|gpt)/i.test(fileName)) {
-        detection.indicators.push('Filename suggests OpenAI origin')
-        detection.confidence += 10
-      } else if (/(midjourney|mj)/i.test(fileName)) {
-        detection.indicators.push('Filename suggests Midjourney origin')
-        detection.confidence += 10
+      // Only use filename as very weak hint
+      if (/(grok|flux|xai|midjourney|dalle|openai|chatgpt)/i.test(fileName)) {
+        detection.indicators.push('Filename might suggest AI origin (weak indicator)')
+        detection.confidence = Math.max(detection.confidence, 25) // Very low confidence
       }
     }
     
@@ -1854,48 +1579,168 @@ async function detectAITool(buffer: Buffer, fileInfo: any, metadataAnalysis: any
   }
 }
 
+// CLIP AI Detection integration
+async function runCLIPAnalysis(buffer: Buffer, type: 'image' | 'text', content?: string): Promise<any> {
+  try {
+    console.log('🚀 CLIP AI Detection başlatılıyor...')
+    
+    const { exec } = require('child_process')
+    const { promisify } = require('util')
+    const execAsync = promisify(exec)
+    const fs = require('fs')
+    const path = require('path')
+    
+    // Python script path
+    const scriptPath = path.join(process.cwd(), 'python_backend', 'clip_detector.py')
+    
+    // Check if Python script exists
+    if (!fs.existsSync(scriptPath)) {
+      console.log('⚠️ CLIP script not found, skipping CLIP analysis')
+      return null
+    }
+    
+    let result
+    
+    if (type === 'image') {
+      // Convert buffer to base64 for Python
+      const base64Data = buffer.toString('base64')
+      
+      // Run CLIP analysis with virtual environment
+      const venvPath = path.join(process.cwd(), 'clip_env', 'bin', 'python3')
+      const command = `"${venvPath}" "${scriptPath}" --type image --input "${base64Data}" --base64`
+      console.log('🔧 Running CLIP image analysis with venv...')
+      
+      const { stdout, stderr } = await execAsync(command, { 
+        timeout: 30000,
+        maxBuffer: 1024 * 1024 * 10, // 10MB buffer
+        encoding: 'utf8'
+      })
+      
+      if (stderr && !stderr.includes('Warning')) {
+        console.error('CLIP stderr:', stderr)
+      }
+      
+      // Clean stdout for JSON parsing  
+      const cleanOutput = stdout.split('\n').filter((line: string) => 
+        line.trim().startsWith('{') || 
+        line.trim().includes('"prediction"') ||
+        line.trim().includes('"confidence"') ||
+        line.trim().includes('}')
+      ).join('\n')
+      
+      try {
+        result = JSON.parse(cleanOutput || stdout)
+      } catch (parseError) {
+        console.error('CLIP JSON parse error:', parseError)
+        console.error('Raw stdout:', stdout)
+        // Fallback: create minimal result
+        result = {
+          prediction: 'uncertain',
+          confidence: 50,
+          error: 'JSON parse failed',
+          method: 'CLIP-Image-Fallback'
+        }
+      }
+      console.log('✅ CLIP image analysis complete:', result.prediction)
+      
+    } else if (type === 'text' && content) {
+      // Escape content for command line
+      const escapedContent = content.replace(/"/g, '\\"').replace(/\n/g, '\\n')
+      const venvPath = path.join(process.cwd(), 'clip_env', 'bin', 'python3')
+      const command = `"${venvPath}" "${scriptPath}" --type text --input "${escapedContent}"`
+      
+      console.log('🔧 Running CLIP text analysis with venv...')
+      
+      const { stdout, stderr } = await execAsync(command, { 
+        timeout: 20000,
+        maxBuffer: 1024 * 1024 * 5, // 5MB buffer
+        encoding: 'utf8'
+      })
+      
+      if (stderr && !stderr.includes('Warning')) {
+        console.error('CLIP stderr:', stderr)
+      }
+      
+      // Clean stdout for JSON parsing
+      const cleanOutput = stdout.split('\n').filter((line: string) => 
+        line.trim().startsWith('{') || 
+        line.trim().includes('"prediction"') ||
+        line.trim().includes('"confidence"') ||
+        line.trim().includes('}')
+      ).join('\n')
+      
+      try {
+        result = JSON.parse(cleanOutput || stdout)
+      } catch (parseError) {
+        console.error('CLIP JSON parse error:', parseError)
+        console.error('Raw stdout:', stdout)
+        // Fallback: create minimal result
+        result = {
+          prediction: 'uncertain',
+          confidence: 50,
+          error: 'JSON parse failed',
+          method: 'CLIP-Text-Fallback'
+        }
+      }
+      console.log('✅ CLIP text analysis complete:', result.prediction)
+    }
+    
+    return result
+    
+  } catch (error) {
+    console.error('❌ CLIP analysis error:', error)
+    // Don't fail the whole analysis if CLIP fails
+    return null
+  }
+}
+
 // Combine all analysis results
-function combineImageAnalysis(metadata: any, visual: any, tool: any, fileInfo: any) {
+function combineImageAnalysis(metadata: any, visual: any, tool: any, fileInfo: any, clipResult?: any) {
   let totalConfidence = 0
   let aiDetection = 'uncertain'
   let explanation = ''
   let sources: string[] = []
   
-  // Enhanced confidence calculation with new detection system
-  let baseConfidence = metadata.confidence + visual.confidence + tool.confidence
+  // CLIP-enhanced confidence calculation  
+  let baseConfidence = (metadata.confidence + visual.confidence + tool.confidence) / 3
   
-  // Priority boost for metadata-based detection (most reliable)
-  if (metadata.detectedSystem) {
-    baseConfidence = Math.min(95, baseConfidence * 1.5) // Strong multiplier for specific AI system detection
-    console.log(`🎯 Specific AI system detected: ${metadata.detectedSystem}`)
+  // CLIP analysis boost (highest priority)
+  if (clipResult && !clipResult.error) {
+    console.log(`🚀 CLIP Analysis Result: ${clipResult.prediction} (${clipResult.confidence}%)`)
+    
+    // CLIP has high weight in decision
+    baseConfidence = (baseConfidence + clipResult.confidence) / 2
+    
+    // If CLIP is very confident, use its prediction
+    if (clipResult.confidence > 70) {
+      aiDetection = clipResult.prediction
+      totalConfidence = Math.min(85, clipResult.confidence)
+      console.log(`🎯 CLIP high confidence detection: ${clipResult.prediction}`)
+    }
   }
   
-  if (metadata.aiSignatures.length > 0) {
-    baseConfidence = Math.min(95, baseConfidence * 1.3) // Metadata signatures are very reliable
+  // Only boost for VERY reliable metadata detection
+  if (metadata.detectedSystem && metadata.confidence > 90) {
+    baseConfidence = Math.min(85, baseConfidence * 1.1) // Smaller multiplier with CLIP
+    console.log(`🎯 Highly reliable AI system detected: ${metadata.detectedSystem}`)
   }
   
-  // Apply multipliers for strong indicators
-  if (tool.detectedTool && tool.detectedTool.includes('ChatGPT')) {
-    baseConfidence = Math.min(95, baseConfidence * 1.2) // Strong multiplier for ChatGPT detection
+  if (!clipResult || clipResult.confidence < 70) {
+    totalConfidence = Math.min(85, Math.max(10, baseConfidence)) // Cap between 10-85
   }
   
-  totalConfidence = Math.min(95, Math.max(5, baseConfidence)) // Cap between 5-95
-  
-  // More aggressive AI detection thresholds
-  if (totalConfidence >= 60) {
+  // MUCH MORE CONSERVATIVE detection thresholds
+  if (totalConfidence >= 70) {
     aiDetection = 'ai-generated'
-  } else if (totalConfidence <= 25) {
+  } else if (totalConfidence <= 35) {
     aiDetection = 'human-generated'  
   } else {
     aiDetection = 'uncertain'
   }
   
-  // Special case: If we detected specific AI system, minimum 70% confidence
-  if (metadata.detectedSystem) {
-    totalConfidence = Math.max(75, totalConfidence)
-    aiDetection = 'ai-generated'
-  } else if (tool.detectedTool && !tool.detectedTool.includes('AI Generated')) {
-    totalConfidence = Math.max(70, totalConfidence)
+  // Special case: Only for VERY certain metadata detection
+  if (metadata.detectedSystem && metadata.confidence > 90) {
+    totalConfidence = Math.max(65, totalConfidence)
     aiDetection = 'ai-generated'
   }
   
@@ -2050,8 +1895,11 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    // Web'de bulunamadıysa, şimdi AI analizine geç
-    console.log('🤖 2. ADIM: Web\'de bulunamadı, AI analizi başlatılıyor...')
+    // Web'de bulunamadıysa, şimdi CLIP ve AI analizine geç
+    console.log('🤖 2. ADIM: Web\'de bulunamadı, CLIP + AI analizi başlatılıyor...')
+    
+    // CLIP text analysis
+    const clipTextAnalysis = await runCLIPAnalysis(Buffer.from(''), 'text', content)
     
     const aiAnalysisResult = await (async () => {
         // API key kontrolü
@@ -2327,21 +2175,36 @@ INDICATORS: [Virgülle ayrılmış önemli göstergeler]`
 
     const aiResult = parseAIResponse(aiAnalysisResult)
 
-    // Final result
+    // CLIP enhanced final result
+    let finalConfidence = aiResult.confidence || 50
+    let finalDetection = aiResult.detection
+    let finalExplanation = aiResult.explanation || 'Analiz tamamlandı'
+    
+    // CLIP override if very confident
+    if (clipTextAnalysis && !clipTextAnalysis.error && clipTextAnalysis.confidence > 70) {
+      console.log(`🚀 CLIP Text Analysis Override: ${clipTextAnalysis.prediction} (${clipTextAnalysis.confidence}%)`)
+      finalConfidence = Math.max(finalConfidence, clipTextAnalysis.confidence)
+      finalDetection = clipTextAnalysis.prediction
+      finalExplanation = `${clipTextAnalysis.explanation}\n\nMistral Analysis: ${finalExplanation}`
+    }
+
     const result = {
-      confidence: aiResult.confidence || 50,
-      aiDetection: aiResult.detection,
-      explanation: aiResult.explanation || 'Analiz tamamlandı',
+      confidence: finalConfidence,
+      aiDetection: finalDetection,
+      explanation: finalExplanation,
       sources: [
+        clipTextAnalysis && !clipTextAnalysis.error ? '🚀 CLIP Vision-Language Model Analysis' : null,
         `Mistral AI ${settings?.model || DEFAULT_MISTRAL_MODEL} modeli kullanılarak analiz edildi`,
         'Gelişmiş dil modeli kalıpları analizi',
         'İnternet araştırması yapıldı',
-        ...aiResult.indicators?.slice(0, 2) || [],
+        clipTextAnalysis?.best_ai_match ? `CLIP AI Pattern: ${clipTextAnalysis.best_ai_match}` : null,
+        clipTextAnalysis?.best_human_match ? `CLIP Human Pattern: ${clipTextAnalysis.best_human_match}` : null,
         ...aiResult.indicators?.slice(0, 2) || []
       ].filter(Boolean).slice(0, 6),
       model: settings?.model || DEFAULT_MISTRAL_MODEL,
       timestamp: new Date().toISOString(),
       webSearch: webSearchResult,
+      clipAnalysis: clipTextAnalysis,
       processingTime: Date.now(),
       rawResponse: aiAnalysisResult
     }
